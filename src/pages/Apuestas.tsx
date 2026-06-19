@@ -2,10 +2,24 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { fetchUpcomingOdds, toBetSelection, type RawFixtureOdds } from '../services/oddsApi'
 import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
-import { combinedOdds, impliedProbability } from '../utils/financialMath'
+import { combinedOdds } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
-import PreBetCheck from '../components/PreBetCheck'
 import ResultModal from '../components/ResultModal'
+import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flags'
+
+/**
+ * Ligas para la barra superior desplegable (C3 / C7). El `id` está listo
+ * para pasarse a `fetchUpcomingOdds(leagueId)` cuando la Cloud Function
+ * `getOdds` acepte el parámetro `league`. Hoy los datos de respaldo lo
+ * ignoran, así que el cambio de liga es visual.
+ */
+const LEAGUES = [
+  { id: 'wc2026', code: 'MU', name: 'Mundial 2026' },
+  { id: 'libertadores', code: 'CL', name: 'Copa Libertadores' },
+  { id: 'laliga', code: 'LL', name: 'LaLiga' },
+  { id: 'premier', code: 'PL', name: 'Premier League' },
+  { id: 'seriea', code: 'SA', name: 'Serie A' },
+]
 
 export default function Apuestas() {
   const { user } = useAuth()
@@ -13,9 +27,10 @@ export default function Apuestas() {
   const [selections, setSelections] = useState<BetSelection[]>([])
   const [stake, setStake] = useState(5)
   const [pastBets, setPastBets] = useState<Bet[]>([])
-  const [pendingConfirm, setPendingConfirm] = useState(false)
   const [resultBet, setResultBet] = useState<Bet | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
+  const [slipOpen, setSlipOpen] = useState(true)
 
   useEffect(() => {
     fetchUpcomingOdds().then(setFixtures)
@@ -36,23 +51,25 @@ export default function Apuestas() {
     })
   }
 
-  async function confirmBet() {
-    if (!user) return
+  /**
+   * C15 / C12 / C13: la previa ya no muestra ningún análisis que pueda
+   * influir en el usuario (antes el modal <PreBetCheck/> aparecía aquí).
+   * En la previa el producto es un simulador de apuestas a secas: se
+   * registra la apuesta directamente y TODO el análisis ocurre DESPUÉS,
+   * en <ResultModal/>.
+   */
+  async function placeBetNow() {
+    if (!user || selections.length === 0) return
     setError(null)
     try {
       const betId = await placeBet(user.uid, selections, stake)
-      // Demo: en este MVP el usuario puede "resolver" su propia apuesta
-      // para ver el flujo completo sin esperar a que termine un partido
-      // real. En producción esto lo decide un resultado real, no un botón.
       setSelections([])
-      setPendingConfirm(false)
       const updated = await getBetHistory(user.uid)
       setPastBets(updated)
       const justPlaced = updated.find((b) => b.id === betId) ?? null
       if (justPlaced) setResultBet(justPlaced)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo registrar la apuesta')
-      setPendingConfirm(false)
     }
   }
 
@@ -66,79 +83,197 @@ export default function Apuestas() {
   }
 
   const odds = combinedOdds(selections)
+  const featured = fixtures[0]
+  const listFixtures = fixtures.slice(1)
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-ink">Apostar (dinero ficticio)</h1>
+      <h1 className="font-serif text-2xl text-ink">Apuestas (dinero ficticio)</h1>
       <p className="mt-1 text-sm text-ink/60">
-        Las cuotas son reales o representativas del mercado. El dinero, no.
+        Cuotas representativas del mercado. El dinero, no.
       </p>
 
-      <div className="mt-6 space-y-4">
-        {fixtures.map((fixture) => (
-          <div key={fixture.fixtureId} className="rounded border border-paperline bg-white p-4">
-            <p className="text-sm font-medium text-ink">{fixture.label}</p>
-            <div className="mt-2 flex gap-2">
-              {fixture.options.map((opt) => {
-                const active = selections.some(
-                  (s) => s.fixtureId === fixture.fixtureId && s.pick === opt.pick
-                )
-                return (
-                  <button
-                    key={opt.pick}
-                    onClick={() => toggleSelection(fixture, opt)}
-                    className={`figure rounded border px-3 py-1.5 text-sm ${
-                      active
-                        ? 'border-slate bg-slate text-paper'
-                        : 'border-paperline text-ink hover:border-slate'
-                    }`}
-                  >
-                    {opt.pick} · {opt.decimalOdds.toFixed(2)}
-                  </button>
-                )
-              })}
+      {/* ===== TABLERO UNIFICADO (C6: una sola superficie, sin recuadros flotantes) ===== */}
+      <div className="mt-6 overflow-hidden rounded-lg border border-paperline bg-white shadow-sm">
+        {/* Barra de ligas desplegable, con símbolos (C3 / C7) */}
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-paperline bg-paper/60 px-4 py-3">
+          <span className="mr-2 flex flex-none items-center gap-2 border-r border-paperline pr-3 text-sm font-semibold text-ink">
+            <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
+            Fútbol
+          </span>
+          {LEAGUES.map((lg) => {
+            const active = lg.id === activeLeague
+            return (
+              <button
+                key={lg.id}
+                onClick={() => {
+                  setActiveLeague(lg.id)
+                  // Listo para: fetchUpcomingOdds(lg.id).then(setFixtures)
+                }}
+                className={`flex flex-none items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-sm font-medium ${
+                  active
+                    ? 'border-slate bg-slate/10 text-slate'
+                    : 'border-paperline text-ink/60 hover:text-ink'
+                }`}
+              >
+                <span
+                  className={`grid h-6 w-6 flex-none place-items-center rounded-md text-[10px] font-bold ${
+                    active ? 'bg-slate text-paper' : 'bg-paperline text-ink'
+                  }`}
+                >
+                  {lg.code}
+                </span>
+                {lg.name}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Partido destacado, integrado en el panel (C6 / C8 / C11 / C14) */}
+        {featured && (
+          <FeaturedFixture
+            fixture={featured}
+            selections={selections}
+            onPick={toggleSelection}
+          />
+        )}
+
+        {/* Cuerpo: lista + boleto */}
+        <div className="flex items-stretch">
+          {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
+          <section className="min-w-0 flex-1 p-4">
+            <p className="mb-3 text-[11px] uppercase tracking-wide text-ink/50">Más partidos</p>
+            <div className="space-y-1">
+              {listFixtures.map((fixture) => (
+                <FixtureRow
+                  key={fixture.fixtureId}
+                  fixture={fixture}
+                  selections={selections}
+                  onPick={toggleSelection}
+                />
+              ))}
+              {listFixtures.length === 0 && (
+                <p className="py-6 text-center text-sm text-ink/50">
+                  No hay más partidos disponibles ahora mismo.
+                </p>
+              )}
             </div>
-          </div>
-        ))}
+          </section>
+
+          {/* Boleto colapsable / minimizable (C4) */}
+          <aside
+            className={`flex-none border-l border-paperline bg-paper/50 transition-all ${
+              slipOpen ? 'w-[300px]' : 'w-14'
+            }`}
+          >
+            {slipOpen ? (
+              <div>
+                <div className="flex items-center justify-between border-b border-paperline px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSlipOpen(false)}
+                      title="Minimizar boleto"
+                      className="grid h-7 w-7 place-items-center rounded-md border border-paperline text-ink/60 hover:text-ink"
+                    >
+                      ›
+                    </button>
+                    <span className="font-serif text-base text-ink">Boleto</span>
+                  </div>
+                  <span className="figure text-xs text-ink/50">
+                    {selections.length === 0
+                      ? '—'
+                      : `${selections.length} ${selections.length === 1 ? 'selección' : 'selecciones'}`}
+                  </span>
+                </div>
+
+                {selections.length === 0 ? (
+                  <p className="px-4 py-10 text-center text-sm text-ink/50">
+                    Toca una cuota para añadirla a tu boleto.
+                  </p>
+                ) : (
+                  <div>
+                    <div className="divide-y divide-paperline">
+                      {selections.map((s) => (
+                        <div key={s.fixtureId + s.pick} className="px-4 py-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-ink">{s.pick}</p>
+                              <p className="figure mt-0.5 text-[11px] text-ink/50">{s.fixtureLabel}</p>
+                            </div>
+                            <span className="figure text-sm font-semibold text-slate">
+                              {s.decimalOdds.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-paperline px-4 py-3 text-sm">
+                      <label className="flex items-center justify-between">
+                        <span className="text-ink/70">Monto (ficticio)</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={stake}
+                          onChange={(e) => setStake(Number(e.target.value))}
+                          className="figure w-24 rounded border border-paperline px-2 py-1 text-right"
+                        />
+                      </label>
+                      <div className="mt-2 flex justify-between">
+                        <span className="text-ink/70">Cuota combinada</span>
+                        <span className="figure font-semibold text-ink">{odds.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-1 flex justify-between">
+                        <span className="text-ink/70">Pago potencial</span>
+                        <span className="figure font-semibold text-sage">
+                          {(stake * odds).toLocaleString('es-EC', {
+                            style: 'currency',
+                            currency: 'USD',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {error && <p className="px-4 text-sm text-burgundy">{error}</p>}
+
+                    <div className="px-4 pb-4 pt-2">
+                      <button
+                        onClick={placeBetNow}
+                        className="w-full rounded bg-slate px-4 py-3 text-sm font-semibold text-paper hover:bg-slatedark"
+                      >
+                        Realizar apuesta ficticia
+                      </button>
+                      <p className="mt-2 text-center text-[11px] text-ink/50">
+                        El análisis completo aparece tras el resultado.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <button
+                  onClick={() => setSlipOpen(true)}
+                  title="Abrir boleto"
+                  className="grid h-9 w-9 place-items-center rounded-md border border-paperline bg-white text-ink hover:border-slate"
+                >
+                  ‹
+                </button>
+                {selections.length > 0 && (
+                  <span className="figure grid h-6 min-w-6 place-items-center rounded-full bg-slate px-1.5 text-xs font-bold text-paper">
+                    {selections.length}
+                  </span>
+                )}
+                <span className="font-serif text-sm text-ink/50 [writing-mode:vertical-rl] [transform:rotate(180deg)]">
+                  Boleto
+                </span>
+              </div>
+            )}
+          </aside>
+        </div>
       </div>
 
-      {selections.length > 0 && (
-        <div className="mt-6 rounded border border-slate bg-white p-4">
-          <p className="text-sm text-ink">
-            {selections.length === 1 ? 'Apuesta simple' : `Combinada de ${selections.length}`} ·
-            cuota total <span className="figure">{odds.toFixed(2)}</span>
-          </p>
-          <label className="mt-3 block text-sm text-ink">
-            Monto a apostar
-            <input
-              type="number"
-              min={1}
-              value={stake}
-              onChange={(e) => setStake(Number(e.target.value))}
-              className="figure mt-1 w-32 rounded border border-paperline px-2 py-1"
-            />
-          </label>
-          {error && <p className="mt-2 text-sm text-burgundy">{error}</p>}
-          <button
-            onClick={() => setPendingConfirm(true)}
-            className="mt-3 rounded bg-ink px-4 py-2 text-sm text-paper"
-          >
-            Revisar y confirmar
-          </button>
-        </div>
-      )}
-
-      {pendingConfirm && (
-        <PreBetCheck
-          combinedOdds={odds}
-          impliedProbability={impliedProbability(odds)}
-          stake={stake}
-          pastBets={pastBets}
-          onConfirm={confirmBet}
-          onCancel={() => setPendingConfirm(false)}
-        />
-      )}
-
+      {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
       {resultBet && resultBet.status !== 'pending' && (
         <ResultModal
           bet={resultBet}
@@ -153,20 +288,179 @@ export default function Apuestas() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
           <div className="w-full max-w-sm rounded-lg bg-paper p-6 text-center">
             <p className="text-sm text-ink/70">
-              Apuesta registrada. Esto solo existe para que pruebes el flujo completo en
-              este MVP — en producción el resultado lo decide el partido real, no un botón:
+              Apuesta registrada. Esto solo existe para que pruebes el flujo completo en este
+              MVP — en producción el resultado lo decide el partido real, no un botón:
             </p>
             <div className="mt-4 flex justify-center gap-3">
-              <button onClick={() => demoResolve(true)} className="rounded bg-sage px-3 py-1.5 text-sm text-paper">
+              <button
+                onClick={() => demoResolve(true)}
+                className="rounded bg-sage px-3 py-1.5 text-sm text-paper"
+              >
                 Simular que ganó
               </button>
-              <button onClick={() => demoResolve(false)} className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper">
+              <button
+                onClick={() => demoResolve(false)}
+                className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper"
+              >
                 Simular que perdió
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ----------------------------------------------------------------------- */
+/* Partido destacado · franja integrada en el panel (no es un recuadro      */
+/* flotante). Badge en burgundy y tipografía sans (C11 / C14): hoy dice     */
+/* "Destacado"; cuando los datos traigan estado en vivo, cámbialo por       */
+/* "EN VIVO · {minuto}".                                                    */
+/* ----------------------------------------------------------------------- */
+function FeaturedFixture({
+  fixture,
+  selections,
+  onPick,
+}: {
+  fixture: RawFixtureOdds
+  selections: BetSelection[]
+  onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
+}) {
+  const teams = teamsFromLabel(fixture.label)
+  return (
+    <div className="border-b border-paperline bg-slatedark px-6 py-5 text-paper">
+      <div className="flex flex-wrap items-center justify-between gap-5">
+        <div className="min-w-[260px] flex-1">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex items-center gap-2 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-paper">
+              <span className="h-1.5 w-1.5 rounded-full bg-paper" />
+              DESTACADO
+            </span>
+            <span className="text-xs font-medium text-paper/60">Partido destacado</span>
+          </div>
+          {teams ? (
+            <div className="flex items-center gap-3 font-serif text-2xl">
+              <TeamName name={teams[0]} />
+              <span className="text-paper/40">vs</span>
+              <TeamName name={teams[1]} />
+            </div>
+          ) : (
+            <div className="font-serif text-2xl">{fixture.label}</div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-right text-[11px] font-medium text-paper/60">{fixture.market}</span>
+          <div className="flex gap-2">
+            {fixture.options.map((opt) => {
+              const active = selections.some(
+                (s) => s.fixtureId === fixture.fixtureId && s.pick === opt.pick
+              )
+              return (
+                <button
+                  key={opt.pick}
+                  onClick={() => onPick(fixture, opt)}
+                  className={`flex min-w-[78px] flex-col items-center gap-1 rounded-lg border px-3 py-2.5 ${
+                    active
+                      ? 'border-paper bg-paper text-ink'
+                      : 'border-paper/25 bg-white/5 text-paper hover:bg-white/10'
+                  }`}
+                >
+                  <span className="text-[10px] opacity-75">{outcomeSymbol(opt.outcomeCode)}</span>
+                  <span className="figure text-lg font-semibold">{opt.decimalOdds.toFixed(2)}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TeamName({ name }: { name: string }) {
+  const flag = flagUrl(name)
+  return (
+    <span className="flex items-center gap-2.5">
+      {flag ? (
+        <img
+          src={flag}
+          alt=""
+          className="h-[21px] w-[30px] rounded-sm object-cover ring-1 ring-paper/20"
+        />
+      ) : (
+        <span className="grid h-[21px] w-[30px] place-items-center rounded-sm bg-white/10 text-[10px]">
+          {name.slice(0, 3).toUpperCase()}
+        </span>
+      )}
+      {name}
+    </span>
+  )
+}
+
+/* ----------------------------------------------------------------------- */
+/* Fila de partido · nombres y cuotas alineados en grid (C9 / C10), banderas */
+/* reales (C8), solo columnas 1 / X / 2 (C1).                                */
+/* ----------------------------------------------------------------------- */
+function FixtureRow({
+  fixture,
+  selections,
+  onPick,
+}: {
+  fixture: RawFixtureOdds
+  selections: BetSelection[]
+  onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
+}) {
+  const teams = teamsFromLabel(fixture.label)
+  return (
+    <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-paper/60">
+      <div className="min-w-0">
+        {teams ? (
+          <div className="space-y-1">
+            <RowTeam name={teams[0]} />
+            <RowTeam name={teams[1]} />
+          </div>
+        ) : (
+          <span className="text-sm font-medium text-ink">{fixture.label}</span>
+        )}
+        <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">{fixture.market}</p>
+      </div>
+
+      {fixture.options.map((opt) => {
+        const active = selections.some(
+          (s) => s.fixtureId === fixture.fixtureId && s.pick === opt.pick
+        )
+        return (
+          <button
+            key={opt.pick}
+            onClick={() => onPick(fixture, opt)}
+            className={`flex h-full flex-col items-center justify-center rounded-lg border py-2 ${
+              active
+                ? 'border-slate bg-slate text-paper'
+                : 'border-paperline text-ink hover:border-slate'
+            }`}
+          >
+            <span className="figure text-sm font-semibold">{opt.decimalOdds.toFixed(2)}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function RowTeam({ name }: { name: string }) {
+  const flag = flagUrl(name)
+  return (
+    <div className="grid grid-cols-[22px_1fr] items-center gap-2.5">
+      {flag ? (
+        <img src={flag} alt="" className="h-[15px] w-[22px] rounded-sm object-cover ring-1 ring-paperline" />
+      ) : (
+        <span className="grid h-[15px] w-[22px] place-items-center rounded-sm bg-paperline text-[8px] text-ink">
+          {name.slice(0, 2).toUpperCase()}
+        </span>
+      )}
+      <span className="truncate text-sm font-medium text-ink">{name}</span>
     </div>
   )
 }
