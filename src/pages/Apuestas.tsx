@@ -5,7 +5,7 @@ import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
 import { combinedOdds } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
-import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flags'
+import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flag'
 
 /**
  * Ligas para la barra superior desplegable (C3 / C7). El `id` está listo
