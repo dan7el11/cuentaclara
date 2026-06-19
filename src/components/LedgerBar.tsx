@@ -7,6 +7,14 @@ interface Props {
 /**
  * Siempre visible, en todas las pantallas. No es un banner que se pueda
  * cerrar: es parte del layout, igual que el saldo en un banco real.
+ *
+ * Cambios pedidos por revisión (Daniel):
+ *  - C13: el indicador editorializaba la pérdida ("Si esto fuera dinero
+ *    real, llevarías …"). En la pantalla de apuestas eso influye antes de
+ *    apostar; aquí se vuelve un dato neutro de simulador: "Resultado neto".
+ *  - C12: el sello "dinero ficticio · sin valor real" se lee como una
+ *    alarma. Se vuelve un chip discreto "Modo simulador". El carácter
+ *    ficticio del dinero sigue marcado en la etiqueta "Saldo ficticio".
  */
 export default function LedgerBar({ wallet }: Props) {
   const isNegative = wallet.balance < 0
@@ -18,12 +26,13 @@ export default function LedgerBar({ wallet }: Props) {
         <Stat label="Saldo ficticio" value={formatMoney(wallet.balance)} alert={isNegative} />
         <Stat label="Apostado en total" value={formatMoney(wallet.totalStaked)} />
         <Stat
-          label="Si esto fuera dinero real, llevarías"
+          label="Resultado neto"
           value={netResult < 0 ? `−${formatMoney(Math.abs(netResult))}` : `+${formatMoney(netResult)}`}
           alert={netResult < 0}
         />
-        <span className="rounded border border-paperline/40 px-2 py-0.5 text-[11px] uppercase tracking-wide text-paper/70">
-          dinero ficticio · sin valor real
+        <span className="flex items-center gap-2 rounded-full border border-paperline/40 px-3 py-1 text-[11px] tracking-wide text-paper/70">
+          <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
+          Modo simulador
         </span>
       </div>
     </div>
