@@ -8,17 +8,17 @@ import ResultModal from '../components/ResultModal'
 import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flag'
 
 /**
- * Ligas para la barra superior desplegable (C3 / C7). El `id` está listo
- * para pasarse a `fetchUpcomingOdds(leagueId)` cuando la Cloud Function
- * `getOdds` acepte el parámetro `league`. Hoy los datos de respaldo lo
- * ignoran, así que el cambio de liga es visual.
+ * Ligas para la barra superior desplegable (C3 / C7). `apiId` y `season`
+ * son los identificadores reales de API-Football: se pasan a
+ * `fetchUpcomingOdds(apiId, season)` para traer las cuotas de esa liga.
+ * (World Cup = 1, Libertadores = 13, LaLiga = 140, Premier = 39, Serie A = 135.)
  */
 const LEAGUES = [
-  { id: 'wc2026', code: 'MU', name: 'Mundial 2026' },
-  { id: 'libertadores', code: 'CL', name: 'Copa Libertadores' },
-  { id: 'laliga', code: 'LL', name: 'LaLiga' },
-  { id: 'premier', code: 'PL', name: 'Premier League' },
-  { id: 'seriea', code: 'SA', name: 'Serie A' },
+  { id: 'wc2026', apiId: 1, season: 2026, code: 'MU', name: 'Mundial 2026' },
+  { id: 'libertadores', apiId: 13, season: 2026, code: 'CL', name: 'Copa Libertadores' },
+  { id: 'laliga', apiId: 140, season: 2025, code: 'LL', name: 'LaLiga' },
+  { id: 'premier', apiId: 39, season: 2025, code: 'PL', name: 'Premier League' },
+  { id: 'seriea', apiId: 135, season: 2025, code: 'SA', name: 'Serie A' },
 ]
 
 export default function Apuestas() {
@@ -32,8 +32,15 @@ export default function Apuestas() {
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
   const [slipOpen, setSlipOpen] = useState(true)
 
+  // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
-    fetchUpcomingOdds().then(setFixtures)
+    const lg = LEAGUES.find((l) => l.id === activeLeague) ?? LEAGUES[0]
+    fetchUpcomingOdds(lg.apiId, lg.season)
+      .then(setFixtures)
+      .catch(() => setFixtures([]))
+  }, [activeLeague])
+
+  useEffect(() => {
     if (user) getBetHistory(user.uid).then(setPastBets)
   }, [user])
 
@@ -106,10 +113,7 @@ export default function Apuestas() {
             return (
               <button
                 key={lg.id}
-                onClick={() => {
-                  setActiveLeague(lg.id)
-                  // Listo para: fetchUpcomingOdds(lg.id).then(setFixtures)
-                }}
+                onClick={() => setActiveLeague(lg.id)}
                 className={`flex flex-none items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-sm font-medium ${
                   active
                     ? 'border-slate bg-slate/10 text-slate'
