@@ -45,6 +45,35 @@ export default async (req: Request) => {
     }
     const json: any = await apiRes.json()
 
+    // API-Football responde 200 aun cuando hay un aviso (plan que no cubre
+    // el endpoint, límite diario agotado, parámetro inválido, etc.): el
+    // detalle viene en json.errors. Si lo ignoramos, solo veríamos un []
+    // silencioso e indescifrable. Lo exponemos tal cual.
+    const errors = json.errors
+    const hasErrors = Array.isArray(errors)
+      ? errors.length > 0
+      : errors && typeof errors === 'object' && Object.keys(errors).length > 0
+    if (hasErrors) {
+      return Response.json(
+        { error: 'API-Football devolvió un aviso', details: errors },
+        { status: 502, headers: { 'Access-Control-Allow-Origin': '*' } }
+      )
+    }
+
+    // Modo diagnóstico: ?debug=1 devuelve los metadatos crudos de la API
+    // (cuántos resultados trajo, paginación, y un ejemplo) para depurar.
+    if (params.get('debug') === '1') {
+      return Response.json(
+        {
+          results: json.results ?? 0,
+          paging: json.paging ?? null,
+          errors: json.errors ?? null,
+          sample: json.response?.[0] ?? null,
+        },
+        { headers: { 'Access-Control-Allow-Origin': '*' } }
+      )
+    }
+
     const toOutcome = (label: string): Outcome | null => {
       const l = String(label).toLowerCase()
       if (l === 'home') return 'home'
