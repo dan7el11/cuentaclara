@@ -45,19 +45,13 @@ const MOCK_FIXTURES: RawFixtureOdds[] = [
  * llama a tu propia Cloud Function (que a su vez llama a API-Football con
  * la clave guardada como secreto). Si no, usa los fixtures de ejemplo.
  */
-export async function fetchUpcomingOdds(
-  leagueId?: string | number,
-  season?: string | number
-): Promise<RawFixtureOdds[]> {
+export async function fetchUpcomingOdds(sport?: string): Promise<RawFixtureOdds[]> {
   if (!GET_ODDS_URL) {
     return MOCK_FIXTURES
   }
 
-  const params = new URLSearchParams()
-  if (leagueId != null) params.set('league', String(leagueId))
-  if (season != null) params.set('season', String(season))
-  const query = params.toString()
-  const url = query ? `${GET_ODDS_URL}?${query}` : GET_ODDS_URL
+  const query = sport ? `?sport=${encodeURIComponent(sport)}` : ''
+  const url = `${GET_ODDS_URL}${query}`
   const res = await fetch(url)
   if (!res.ok) {
     throw new Error(`No se pudieron obtener las cuotas (status ${res.status})`)

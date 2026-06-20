@@ -8,17 +8,16 @@ import ResultModal from '../components/ResultModal'
 import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flag'
 
 /**
- * Ligas para la barra superior desplegable (C3 / C7). `apiId` y `season`
- * son los identificadores reales de API-Football: se pasan a
- * `fetchUpcomingOdds(apiId, season)` para traer las cuotas de esa liga.
- * (World Cup = 1, Libertadores = 13, LaLiga = 140, Premier = 39, Serie A = 135.)
+ * Ligas para la barra superior desplegable (C3 / C7). `sport` es la clave
+ * de The Odds API que se pasa a `fetchUpcomingOdds(sport)` para traer las
+ * cuotas reales de esa competición.
  */
 const LEAGUES = [
-  { id: 'wc2026', apiId: 1, season: 2026, code: 'MU', name: 'Mundial 2026' },
-  { id: 'libertadores', apiId: 13, season: 2026, code: 'CL', name: 'Copa Libertadores' },
-  { id: 'laliga', apiId: 140, season: 2025, code: 'LL', name: 'LaLiga' },
-  { id: 'premier', apiId: 39, season: 2025, code: 'PL', name: 'Premier League' },
-  { id: 'seriea', apiId: 135, season: 2025, code: 'SA', name: 'Serie A' },
+  { id: 'wc2026', sport: 'soccer_fifa_world_cup', code: 'MU', name: 'Mundial 2026' },
+  { id: 'libertadores', sport: 'soccer_conmebol_copa_libertadores', code: 'CL', name: 'Copa Libertadores' },
+  { id: 'laliga', sport: 'soccer_spain_la_liga', code: 'LL', name: 'LaLiga' },
+  { id: 'premier', sport: 'soccer_epl', code: 'PL', name: 'Premier League' },
+  { id: 'seriea', sport: 'soccer_italy_serie_a', code: 'SA', name: 'Serie A' },
 ]
 
 export default function Apuestas() {
@@ -35,7 +34,7 @@ export default function Apuestas() {
   // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
     const lg = LEAGUES.find((l) => l.id === activeLeague) ?? LEAGUES[0]
-    fetchUpcomingOdds(lg.apiId, lg.season)
+    fetchUpcomingOdds(lg.sport)
       .then(setFixtures)
       .catch(() => setFixtures([]))
   }, [activeLeague])
