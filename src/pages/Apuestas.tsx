@@ -5,19 +5,20 @@ import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
 import { combinedOdds } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
-import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flag'
+import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flags'
 
 /**
- * Ligas para la barra superior desplegable (C3 / C7). `sport` es la clave
- * de The Odds API que se pasa a `fetchUpcomingOdds(sport)` para traer las
- * cuotas reales de esa competición.
+ * Ligas para la barra superior desplegable (C3 / C7). El `id` está listo
+ * para pasarse a `fetchUpcomingOdds(leagueId)` cuando la Cloud Function
+ * `getOdds` acepte el parámetro `league`. Hoy los datos de respaldo lo
+ * ignoran, así que el cambio de liga es visual.
  */
 const LEAGUES = [
-  { id: 'wc2026', sport: 'soccer_fifa_world_cup', code: 'MU', name: 'Mundial 2026' },
-  { id: 'libertadores', sport: 'soccer_conmebol_copa_libertadores', code: 'CL', name: 'Copa Libertadores' },
-  { id: 'laliga', sport: 'soccer_spain_la_liga', code: 'LL', name: 'LaLiga' },
-  { id: 'premier', sport: 'soccer_epl', code: 'PL', name: 'Premier League' },
-  { id: 'seriea', sport: 'soccer_italy_serie_a', code: 'SA', name: 'Serie A' },
+  { id: 'wc2026', code: 'MU', name: 'Mundial 2026' },
+  { id: 'libertadores', code: 'CL', name: 'Copa Libertadores' },
+  { id: 'laliga', code: 'LL', name: 'LaLiga' },
+  { id: 'premier', code: 'PL', name: 'Premier League' },
+  { id: 'seriea', code: 'SA', name: 'Serie A' },
 ]
 
 export default function Apuestas() {
@@ -31,15 +32,8 @@ export default function Apuestas() {
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
   const [slipOpen, setSlipOpen] = useState(true)
 
-  // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
-    const lg = LEAGUES.find((l) => l.id === activeLeague) ?? LEAGUES[0]
-    fetchUpcomingOdds(lg.sport)
-      .then(setFixtures)
-      .catch(() => setFixtures([]))
-  }, [activeLeague])
-
-  useEffect(() => {
+    fetchUpcomingOdds().then(setFixtures)
     if (user) getBetHistory(user.uid).then(setPastBets)
   }, [user])
 
@@ -94,15 +88,23 @@ export default function Apuestas() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-ink">Apuestas (dinero ficticio)</h1>
-      <p className="mt-1 text-sm text-ink/60">
-        Cuotas representativas del mercado. El dinero, no.
-      </p>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-3xl tracking-tight text-ink">Apuestas</h1>
+          <p className="mt-1 text-sm text-ink/55">
+            Cuotas representativas del mercado. El dinero, no.
+          </p>
+        </div>
+        <span className="figure mb-1 hidden rounded-full border border-paperline px-3 py-1 text-[11px] tracking-wide text-ink/55 sm:inline">
+          dinero ficticio
+        </span>
+      </div>
+      <div className="ledger-rule mt-4" />
 
       {/* ===== TABLERO UNIFICADO (C6: una sola superficie, sin recuadros flotantes) ===== */}
-      <div className="mt-6 overflow-hidden rounded-lg border border-paperline bg-white shadow-sm">
+      <div className="mt-5 overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
         {/* Barra de ligas desplegable, con símbolos (C3 / C7) */}
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-paperline bg-paper/60 px-4 py-3">
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-paperline bg-paper/50 px-4 py-3">
           <span className="mr-2 flex flex-none items-center gap-2 border-r border-paperline pr-3 text-sm font-semibold text-ink">
             <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
             Fútbol
@@ -112,11 +114,14 @@ export default function Apuestas() {
             return (
               <button
                 key={lg.id}
-                onClick={() => setActiveLeague(lg.id)}
-                className={`flex flex-none items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-sm font-medium ${
+                onClick={() => {
+                  setActiveLeague(lg.id)
+                  // Listo para: fetchUpcomingOdds(lg.id).then(setFixtures)
+                }}
+                className={`flex flex-none items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors ${
                   active
-                    ? 'border-slate bg-slate/10 text-slate'
-                    : 'border-paperline text-ink/60 hover:text-ink'
+                    ? 'border-slate bg-slate/10 text-slate shadow-sm'
+                    : 'border-paperline text-ink/55 hover:border-slate/40 hover:text-ink'
                 }`}
               >
                 <span
@@ -145,8 +150,9 @@ export default function Apuestas() {
         <div className="flex items-stretch">
           {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
           <section className="min-w-0 flex-1 p-4">
-            <p className="mb-3 text-[11px] uppercase tracking-wide text-ink/50">Más partidos</p>
-            <div className="space-y-1">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/45">Más partidos</p>
+            <div className="ledger-rule mb-3" />
+            <div className="divide-y divide-paperline/70">
               {listFixtures.map((fixture) => (
                 <FixtureRow
                   key={fixture.fixtureId}
@@ -332,15 +338,32 @@ function FeaturedFixture({
 }) {
   const teams = teamsFromLabel(fixture.label)
   return (
-    <div className="border-b border-paperline bg-slatedark px-6 py-5 text-paper">
-      <div className="flex flex-wrap items-center justify-between gap-5">
+    <div
+      className="relative overflow-hidden border-b border-paperline px-6 py-5 text-paper"
+      style={{
+        background:
+          'linear-gradient(118deg, #2C4356 0%, #34506A 55%, #3D5A73 100%)',
+      }}
+    >
+      {/* textura de talonario, sutil */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(115deg, #fff 0 1px, transparent 1px 22px)',
+        }}
+      />
+      {/* hairline ochre superior */}
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-ochre/50" />
+      <div className="relative flex flex-wrap items-center justify-between gap-5">
         <div className="min-w-[260px] flex-1">
           <div className="mb-4 flex items-center gap-3">
-            <span className="flex items-center gap-2 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-paper">
+            <span className="flex items-center gap-1.5 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-paper">
               <span className="h-1.5 w-1.5 rounded-full bg-paper" />
               DESTACADO
             </span>
-            <span className="text-xs font-medium text-paper/60">Partido destacado</span>
+            <span className="text-xs font-medium uppercase tracking-[0.1em] text-paper/55">Partido destacado</span>
           </div>
           {teams ? (
             <div className="flex items-center gap-3 font-serif text-2xl">
@@ -354,7 +377,7 @@ function FeaturedFixture({
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-right text-[11px] font-medium text-paper/60">{fixture.market}</span>
+          <span className="text-right text-[11px] font-medium uppercase tracking-[0.1em] text-paper/55">{fixture.market}</span>
           <div className="flex gap-2">
             {fixture.options.map((opt) => {
               const active = selections.some(
@@ -364,13 +387,13 @@ function FeaturedFixture({
                 <button
                   key={opt.pick}
                   onClick={() => onPick(fixture, opt)}
-                  className={`flex min-w-[78px] flex-col items-center gap-1 rounded-lg border px-3 py-2.5 ${
+                  className={`flex min-w-[80px] flex-col items-center gap-1 rounded-lg border px-3 py-2.5 transition-colors ${
                     active
-                      ? 'border-paper bg-paper text-ink'
-                      : 'border-paper/25 bg-white/5 text-paper hover:bg-white/10'
+                      ? 'border-paper bg-paper text-ink shadow-sm'
+                      : 'border-paper/20 bg-white/5 text-paper hover:border-paper/40 hover:bg-white/10'
                   }`}
                 >
-                  <span className="text-[10px] opacity-75">{outcomeSymbol(opt.outcomeCode)}</span>
+                  <span className="text-[10px] font-semibold opacity-70">{outcomeSymbol(opt.outcomeCode)}</span>
                   <span className="figure text-lg font-semibold">{opt.decimalOdds.toFixed(2)}</span>
                 </button>
               )
@@ -417,7 +440,7 @@ function FixtureRow({
 }) {
   const teams = teamsFromLabel(fixture.label)
   return (
-    <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-paper/60">
+    <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 px-2 py-3 transition-colors hover:bg-paper/50">
       <div className="min-w-0">
         {teams ? (
           <div className="space-y-1">
@@ -438,10 +461,10 @@ function FixtureRow({
           <button
             key={opt.pick}
             onClick={() => onPick(fixture, opt)}
-            className={`flex h-full flex-col items-center justify-center rounded-lg border py-2 ${
+            className={`flex h-full flex-col items-center justify-center rounded-lg border py-2 transition-colors ${
               active
-                ? 'border-slate bg-slate text-paper'
-                : 'border-paperline text-ink hover:border-slate'
+                ? 'border-slate bg-slate text-paper shadow-sm'
+                : 'border-paperline text-ink hover:border-slate hover:bg-paper/60'
             }`}
           >
             <span className="figure text-sm font-semibold">{opt.decimalOdds.toFixed(2)}</span>
