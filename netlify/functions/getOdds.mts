@@ -1,14 +1,17 @@
-// Proxy de cuotas para Netlify Functions.
+// Proxy de cuotas para Netlify Functions usando The Odds API
+// (the-odds-api.com). Plan gratuito: 500 peticiones/mes, con cuotas
+// reales de casas de apuestas, incluido el Mundial.
 //
-// La clave de API-Football vive SOLO acá, como variable de entorno del
-// servidor (APIFOOTBALL_KEY en Netlify > Site settings > Environment
-// variables). Nunca se expone en el navegador. El cliente llama a
-// /.netlify/functions/getOdds (ver VITE_GETODDS_URL) en vez de a
-// API-Football directamente.
+// La clave vive SOLO acá, como variable de entorno del servidor
+// (ODDS_API_KEY en Netlify). Nunca se expone en el navegador. El cliente
+// llama a /.netlify/functions/getOdds?sport=... (ver VITE_GETODDS_URL) y
+// recibe la forma que ya espera: RawFixtureOdds[].
 //
-// Devuelve la misma forma que ya espera el cliente: RawFixtureOdds[].
+// Modos de diagnóstico:
+//   ?list=1   -> lista las competiciones de fútbol disponibles para tu clave
+//   ?debug=1  -> metadatos crudos (cuántos partidos, ejemplo, cuota restante)
 
-const BASE_URL = 'https://v3.football.api-sports.io'
+const BASE_URL = 'https://api.the-odds-api.com/v4'
 
 type Outcome = 'home' | 'draw' | 'away'
 
@@ -19,91 +22,93 @@ interface RawFixtureOdds {
   options: { pick: string; decimalOdds: number; outcomeCode: Outcome }[]
 }
 
+const cors = { 'Access-Control-Allow-Origin': '*' }
+
 export default async (req: Request) => {
-  const key = process.env.APIFOOTBALL_KEY
+  const key = process.env.ODDS_API_KEY
   if (!key) {
     return Response.json(
-      { error: 'Falta la variable APIFOOTBALL_KEY en el servidor de Netlify.' },
-      { status: 500 }
+      { error: 'Falta la variable ODDS_API_KEY en el servidor de Netlify.' },
+      { status: 500, headers: cors }
     )
   }
 
   const params = new URL(req.url).searchParams
-  const league = params.get('league') ?? undefined
-  // Por defecto 2024: el endpoint /odds de API-Football solo trae cuotas de
-  // temporadas/ligas cubiertas por tu plan. Pasá ?season=AAAA para cambiarla.
-  const season = params.get('season') ?? '2024'
-  const url = `${BASE_URL}/odds?${league ? `league=${league}&` : ''}season=${season}`
+
+  // ?list=1 -> devuelve las competiciones de fútbol activas para tu clave,
+  // para encontrar la clave exacta de cada liga (sport_key).
+  if (params.get('list') === '1') {
+    const res = await fetch(`${BASE_URL}/sports/?apiKey=${key}`)
+    if (!res.ok) {
+      return Response.json(
+        { error: `The Odds API respondió ${res.status}`, body: await res.text() },
+        { status: res.status, headers: cors }
+      )
+    }
+    const all: any[] = await res.json()
+    const soccer = all
+      .filter((s) => String(s.group).toLowerCase() === 'soccer')
+      .map((s) => ({ key: s.key, title: s.title, active: s.active }))
+    return Response.json(soccer, { headers: cors })
+  }
+
+  // Competición a consultar. Por defecto, el Mundial.
+  const sport = params.get('sport') ?? 'soccer_fifa_world_cup'
+  const regions = params.get('regions') ?? 'eu'
+  const url = `${BASE_URL}/sports/${sport}/odds/?apiKey=${key}&regions=${regions}&markets=h2h&oddsFormat=decimal`
 
   try {
-    const apiRes = await fetch(url, { headers: { 'x-apisports-key': key } })
+    const apiRes = await fetch(url)
     if (!apiRes.ok) {
       return Response.json(
-        { error: `API-Football respondió ${apiRes.status}` },
-        { status: apiRes.status }
+        { error: `The Odds API respondió ${apiRes.status}`, body: await apiRes.text() },
+        { status: apiRes.status, headers: cors }
       )
     }
-    const json: any = await apiRes.json()
+    const events: any[] = await apiRes.json()
 
-    // API-Football responde 200 aun cuando hay un aviso (plan que no cubre
-    // el endpoint, límite diario agotado, parámetro inválido, etc.): el
-    // detalle viene en json.errors. Si lo ignoramos, solo veríamos un []
-    // silencioso e indescifrable. Lo exponemos tal cual.
-    const errors = json.errors
-    const hasErrors = Array.isArray(errors)
-      ? errors.length > 0
-      : errors && typeof errors === 'object' && Object.keys(errors).length > 0
-    if (hasErrors) {
-      return Response.json(
-        { error: 'API-Football devolvió un aviso', details: errors },
-        { status: 502, headers: { 'Access-Control-Allow-Origin': '*' } }
-      )
-    }
-
-    // Modo diagnóstico: ?debug=1 devuelve los metadatos crudos de la API
-    // (cuántos resultados trajo, paginación, y un ejemplo) para depurar.
     if (params.get('debug') === '1') {
       return Response.json(
         {
-          results: json.results ?? 0,
-          paging: json.paging ?? null,
-          errors: json.errors ?? null,
-          sample: json.response?.[0] ?? null,
+          count: events.length,
+          requestsRemaining: apiRes.headers.get('x-requests-remaining'),
+          requestsUsed: apiRes.headers.get('x-requests-used'),
+          sample: events[0] ?? null,
         },
-        { headers: { 'Access-Control-Allow-Origin': '*' } }
+        { headers: cors }
       )
     }
 
-    const toOutcome = (label: string): Outcome | null => {
-      const l = String(label).toLowerCase()
-      if (l === 'home') return 'home'
-      if (l === 'draw') return 'draw'
-      if (l === 'away') return 'away'
-      return null
-    }
+    const fixtures: RawFixtureOdds[] = events.map((ev) => {
+      const home = ev.home_team ?? '?'
+      const away = ev.away_team ?? '?'
+      // Tomamos el primer bookmaker con mercado h2h (1X2).
+      const h2h = ev.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'h2h')
+      const outcomes: any[] = h2h?.outcomes ?? []
 
-    // Mapeo a RawFixtureOdds[]. Asume bookmakers[0].bets[0]; ajustalo si la
-    // respuesta real de tu plan tiene otra forma.
-    const fixtures: RawFixtureOdds[] = (json.response ?? []).map((item: any) => {
-      const values = item.bookmakers?.[0]?.bets?.[0]?.values ?? []
+      const optionFor = (code: Outcome) => {
+        const name = code === 'home' ? home : code === 'away' ? away : 'Draw'
+        const o = outcomes.find((x) => x.name === name)
+        if (!o) return null
+        const pick = code === 'home' ? `${home} gana` : code === 'away' ? `${away} gana` : 'Empate'
+        return { pick, decimalOdds: Number(o.price), outcomeCode: code }
+      }
+
+      // Orden fijo 1 / X / 2.
+      const options = (['home', 'draw', 'away'] as Outcome[])
+        .map(optionFor)
+        .filter((o): o is NonNullable<typeof o> => o !== null)
+
       return {
-        fixtureId: String(item.fixture?.id ?? ''),
-        label: `${item.teams?.home?.name ?? '?'} vs. ${item.teams?.away?.name ?? '?'}`,
+        fixtureId: String(ev.id ?? ''),
+        label: `${home} vs. ${away}`,
         market: '1X2',
-        options: values
-          .map((v: any) => ({
-            pick: v.value,
-            decimalOdds: parseFloat(v.odd),
-            outcomeCode: toOutcome(v.value),
-          }))
-          .filter((o: any) => o.outcomeCode !== null),
+        options,
       }
     })
 
-    return Response.json(fixtures, {
-      headers: { 'Access-Control-Allow-Origin': '*' },
-    })
+    return Response.json(fixtures, { headers: cors })
   } catch (err) {
-    return Response.json({ error: 'Error al consultar cuotas' }, { status: 500 })
+    return Response.json({ error: 'Error al consultar cuotas' }, { status: 500, headers: cors })
   }
 }
