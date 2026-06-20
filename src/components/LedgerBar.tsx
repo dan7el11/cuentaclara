@@ -4,7 +4,6 @@ interface Props {
   wallet: Wallet
 }
 
- */
 export default function LedgerBar({ wallet }: Props) {
   const isNegative = wallet.balance < 0
   const netResult = wallet.totalWon - wallet.totalLost
