@@ -1,20 +1,27 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
-import { subscribeToWallet } from '../services/walletService'
+import { subscribeToWallet, deposit, getRecentTransactions } from '../services/walletService'
 import { enablePush, pushAlreadyGranted, type PushStatus } from '../services/push'
 import { estimateOpportunityCost } from '../utils/financialMath'
-import type { VirtualCardData, Wallet } from '../types'
+import type { Transaction, VirtualCardData, Wallet } from '../types'
 import VirtualCard from '../components/VirtualCard'
+import DepositModal from '../components/DepositModal'
 
 export default function Dashboard() {
   const { user } = useAuth()
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [card, setCard] = useState<VirtualCardData | null>(null)
+  const [txns, setTxns] = useState<Transaction[]>([])
+  const [depositOpen, setDepositOpen] = useState(false)
   const [pushState, setPushState] = useState<PushStatus | 'idle' | 'working'>(
     pushAlreadyGranted() ? 'granted' : 'idle'
   )
+
+  const loadTxns = useCallback(() => {
+    if (user) getRecentTransactions(user.uid).then(setTxns).catch(() => setTxns([]))
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -22,8 +29,9 @@ export default function Dashboard() {
     getDoc(doc(db, 'cards', user.uid)).then((snap) => {
       if (snap.exists()) setCard(snap.data() as VirtualCardData)
     })
+    loadTxns()
     return unsub
-  }, [user])
+  }, [user, loadTxns])
 
   async function handleEnablePush() {
     if (!user) return
@@ -35,6 +43,12 @@ export default function Dashboard() {
     }
   }
 
+  async function handleDeposit(amount: number) {
+    if (!user) return
+    await deposit(user.uid, amount)
+    loadTxns()
+  }
+
   if (!wallet)
     return (
       <div className="flex items-center gap-3 text-ink/50">
@@ -43,10 +57,7 @@ export default function Dashboard() {
       </div>
     )
 
-  const yearsActive = Math.max(
-    (Date.now() - wallet.createdAt) / (1000 * 60 * 60 * 24 * 365),
-    0.08
-  )
+  const yearsActive = Math.max((Date.now() - wallet.createdAt) / (1000 * 60 * 60 * 24 * 365), 0.08)
   const opportunity = estimateOpportunityCost(wallet.totalStaked, Math.max(yearsActive, 5))
   const net = wallet.totalWon - wallet.totalLost
 
@@ -72,8 +83,18 @@ export default function Dashboard() {
               style={{ background: 'linear-gradient(118deg, #2C4356 0%, #34506A 55%, #3D5A73 100%)' }}
             >
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-ochre/50" />
-              <p className="text-[11px] uppercase tracking-[0.14em] text-paper/55">Saldo ficticio</p>
-              <p className="figure mt-1 text-4xl font-semibold">{money(wallet.balance)}</p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-paper/55">Saldo ficticio</p>
+                  <p className="figure mt-1 text-4xl font-semibold">{money(wallet.balance)}</p>
+                </div>
+                <button
+                  onClick={() => setDepositOpen(true)}
+                  className="rounded-md border border-paper/30 bg-white/10 px-3 py-1.5 text-sm font-medium text-paper transition-colors hover:bg-white/20"
+                >
+                  + Recargar
+                </button>
+              </div>
               <div className="mt-4 flex gap-6 text-sm">
                 <MiniStat label="Apostado" value={money(wallet.totalStaked)} />
                 <MiniStat
@@ -102,9 +123,7 @@ export default function Dashboard() {
           <div className="m-6 mt-2 rounded-lg border border-sage/30 bg-sage/5 p-5">
             <div className="flex items-center gap-2">
               <span className="grid h-6 w-6 place-items-center rounded-md bg-sage text-[11px] font-bold text-paper">↗</span>
-              <h3 className="text-sm font-medium text-ink">
-                Si ese dinero hubiera ido a un fondo indexado
-              </h3>
+              <h3 className="text-sm font-medium text-ink">Si ese dinero hubiera ido a un fondo indexado</h3>
             </div>
             <p className="figure mt-3 text-3xl font-semibold text-sage">
               {money(opportunity.futureValue)}
@@ -116,11 +135,41 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Actividad reciente */}
+        <div className="overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
+          <div className="border-b border-paperline px-6 py-4">
+            <h2 className="font-serif text-lg text-ink">Actividad reciente</h2>
+          </div>
+          {txns.length === 0 ? (
+            <div className="px-6 py-8 text-center text-sm text-ink/50">
+              Todavía no hay movimientos. Recargá saldo o registrá una apuesta para empezar.
+            </div>
+          ) : (
+            <ul className="divide-y divide-paperline/70">
+              {txns.map((t) => (
+                <li key={t.id} className="flex items-center justify-between px-6 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-ink">{txnLabel(t.type)}</p>
+                    <p className="figure text-[11px] text-ink/50">{formatDate(t.createdAt)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`figure text-sm font-semibold ${t.amount < 0 ? 'text-burgundy' : 'text-sage'}`}>
+                      {t.amount < 0 ? '−' : '+'}
+                      {money(Math.abs(t.amount))}
+                    </p>
+                    <p className="figure text-[11px] text-ink/45">saldo {money(t.balanceAfter)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Notificaciones */}
         <div className="rounded-xl border border-paperline bg-white p-5 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
           <h3 className="text-sm font-medium text-ink">Notificaciones</h3>
           <p className="mt-1 text-xs text-ink/60">
-            Te avisamos en cuanto se resuelva una apuesta: si ganaste o perdiste, con la app
-            cerrada.
+            Te avisamos en cuanto se resuelva una apuesta: si ganaste o perdiste, con la app cerrada.
           </p>
           {pushState === 'granted' ? (
             <p className="mt-3 text-sm text-sage">✓ Notificaciones activadas en este dispositivo.</p>
@@ -144,6 +193,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {depositOpen && (
+        <DepositModal
+          currentBalance={wallet.balance}
+          onClose={() => setDepositOpen(false)}
+          onConfirm={handleDeposit}
+        />
+      )}
     </div>
   )
 }
@@ -175,6 +232,32 @@ function Row({
       <dd className={`figure font-medium ${toneClass}`}>{children}</dd>
     </div>
   )
+}
+
+function txnLabel(type: Transaction['type']): string {
+  switch (type) {
+    case 'deposit_sim':
+      return 'Recarga de saldo'
+    case 'bet_placed':
+      return 'Apuesta registrada'
+    case 'bet_won':
+      return 'Apuesta ganada'
+    case 'bet_lost':
+      return 'Apuesta perdida'
+    default:
+      return 'Movimiento'
+  }
+}
+
+function formatDate(ms: number): string {
+  return new Intl.DateTimeFormat('es-EC', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(new Date(ms))
+    .replace(/\./g, '')
 }
 
 function money(n: number) {
