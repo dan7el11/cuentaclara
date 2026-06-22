@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   getDoc,
   increment,
@@ -16,9 +17,39 @@ import type { Bet, BetSelection, Transaction, Wallet } from '../types'
 import { combinedOdds, impliedProbability } from '../utils/financialMath'
 import { fetchScores } from './oddsApi'
 
-export function subscribeToWallet(uid: string, cb: (wallet: Wallet | null) => void) {
-  return onSnapshot(doc(db, 'wallets', uid), (snap) => {
-    cb(snap.exists() ? (snap.data() as Wallet) : null)
+export function subscribeToWallet(
+  uid: string,
+  cb: (wallet: Wallet | null) => void,
+  onError?: (error: Error) => void
+) {
+  return onSnapshot(
+    doc(db, 'wallets', uid),
+    (snap) => cb(snap.exists() ? (snap.data() as Wallet) : null),
+    (error) => onError?.(error)
+  )
+}
+
+/**
+ * Crea la billetera ficticia del usuario si todavía no existe. Sirve para
+ * cuentas viejas (creadas antes de tener billetera) o si el documento se
+ * perdió: deja a la persona operar sin quedarse en "Cargando…".
+ */
+export async function ensureWallet(
+  uid: string,
+  startingBalance = 100,
+  debtThreshold = 50
+): Promise<void> {
+  const ref = doc(db, 'wallets', uid)
+  const snap = await getDoc(ref)
+  if (snap.exists()) return
+  await setDoc(ref, {
+    uid,
+    balance: startingBalance,
+    totalStaked: 0,
+    totalLost: 0,
+    totalWon: 0,
+    debtThreshold: -Math.abs(debtThreshold),
+    createdAt: Date.now(),
   })
 }
 

@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
-import { subscribeToWallet, deposit, getRecentTransactions } from '../services/walletService'
+import {
+  subscribeToWallet,
+  deposit,
+  getRecentTransactions,
+  ensureWallet,
+} from '../services/walletService'
 import { enablePush, pushAlreadyGranted, type PushStatus } from '../services/push'
 import { estimateOpportunityCost } from '../utils/financialMath'
 import type { Transaction, VirtualCardData, Wallet } from '../types'
@@ -12,6 +17,9 @@ import DepositModal from '../components/DepositModal'
 export default function Dashboard() {
   const { user } = useAuth()
   const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
   const [card, setCard] = useState<VirtualCardData | null>(null)
   const [txns, setTxns] = useState<Transaction[]>([])
   const [depositOpen, setDepositOpen] = useState(false)
@@ -25,13 +33,36 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return
-    const unsub = subscribeToWallet(user.uid, setWallet)
+    const unsub = subscribeToWallet(
+      user.uid,
+      (w) => {
+        setWallet(w)
+        setLoaded(true)
+        setLoadError(null)
+      },
+      (err) => {
+        setLoaded(true)
+        setLoadError(err.message)
+      }
+    )
     getDoc(doc(db, 'cards', user.uid)).then((snap) => {
       if (snap.exists()) setCard(snap.data() as VirtualCardData)
     })
     loadTxns()
     return unsub
   }, [user, loadTxns])
+
+  async function handleCreateWallet() {
+    if (!user) return
+    setCreating(true)
+    try {
+      await ensureWallet(user.uid)
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'No se pudo crear la cuenta')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   async function handleEnablePush() {
     if (!user) return
@@ -49,11 +80,43 @@ export default function Dashboard() {
     loadTxns()
   }
 
-  if (!wallet)
+  if (!loaded)
     return (
       <div className="flex items-center gap-3 text-ink/50">
         <span className="h-2 w-2 animate-pulse rounded-full bg-ochre" />
         Cargando tu cuenta…
+      </div>
+    )
+
+  if (!wallet)
+    return (
+      <div className="mx-auto max-w-md">
+        <h1 className="font-serif text-2xl text-ink">Tu cuenta ficticia</h1>
+        <div className="ledger-rule mt-3" />
+        {loadError ? (
+          <div className="mt-5 rounded-xl border border-burgundy/30 bg-burgundy/5 p-5 text-sm">
+            <p className="font-medium text-burgundy">No pudimos leer tu cuenta.</p>
+            <p className="mt-1 text-ink/70">{loadError}</p>
+            <p className="mt-2 text-xs text-ink/55">
+              Suele ser un tema de permisos de Firestore: las reglas deben permitir que cada
+              usuario lea y escriba su propio documento en <code>wallets/&#123;uid&#125;</code>.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl border border-paperline bg-white p-6 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
+            <p className="text-sm text-ink/70">
+              Todavía no tenés una billetera ficticia. Creá una para empezar a simular con saldo
+              ficticio (sin valor real).
+            </p>
+            <button
+              onClick={handleCreateWallet}
+              disabled={creating}
+              className="mt-4 rounded bg-slate px-4 py-2 text-sm font-semibold text-paper hover:bg-slatedark disabled:opacity-50"
+            >
+              {creating ? 'Creando…' : 'Crear cuenta con $100 ficticios'}
+            </button>
+          </div>
+        )}
       </div>
     )
 
