@@ -5,3 +5,6 @@
 
 [functions]
   directory = "netlify/functions"
+  # firebase-admin trae dependencias que el bundler no debe empacar: se
+  # incluye como node_module tal cual (si no, falla el build de la función).
+  external_node_modules = ["firebase-admin"]

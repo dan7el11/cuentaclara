@@ -3,6 +3,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
 import { subscribeToWallet } from '../services/walletService'
+import { enablePush, pushAlreadyGranted, type PushStatus } from '../services/push'
 import { estimateOpportunityCost } from '../utils/financialMath'
 import type { VirtualCardData, Wallet } from '../types'
 import VirtualCard from '../components/VirtualCard'
@@ -11,6 +12,9 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [card, setCard] = useState<VirtualCardData | null>(null)
+  const [pushState, setPushState] = useState<PushStatus | 'idle' | 'working'>(
+    pushAlreadyGranted() ? 'granted' : 'idle'
+  )
 
   useEffect(() => {
     if (!user) return
@@ -20,6 +24,16 @@ export default function Dashboard() {
     })
     return unsub
   }, [user])
+
+  async function handleEnablePush() {
+    if (!user) return
+    setPushState('working')
+    try {
+      setPushState(await enablePush(user.uid))
+    } catch {
+      setPushState('unsupported')
+    }
+  }
 
   if (!wallet)
     return (
@@ -100,6 +114,34 @@ export default function Dashboard() {
             </p>
             <p className="mt-2 text-xs leading-relaxed text-ink/50">{opportunity.disclaimer}</p>
           </div>
+        </div>
+
+        <div className="rounded-xl border border-paperline bg-white p-5 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
+          <h3 className="text-sm font-medium text-ink">Notificaciones</h3>
+          <p className="mt-1 text-xs text-ink/60">
+            Te avisamos en cuanto se resuelva una apuesta: si ganaste o perdiste, con la app
+            cerrada.
+          </p>
+          {pushState === 'granted' ? (
+            <p className="mt-3 text-sm text-sage">✓ Notificaciones activadas en este dispositivo.</p>
+          ) : pushState === 'denied' ? (
+            <p className="mt-3 text-sm text-burgundy">
+              Bloqueaste las notificaciones. Actívalas desde los ajustes del navegador.
+            </p>
+          ) : pushState === 'unsupported' ? (
+            <p className="mt-3 text-sm text-ink/60">
+              Este navegador no soporta notificaciones push (en iPhone, primero añade la app a la
+              pantalla de inicio).
+            </p>
+          ) : (
+            <button
+              onClick={handleEnablePush}
+              disabled={pushState === 'working'}
+              className="mt-3 rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark disabled:opacity-50"
+            >
+              {pushState === 'working' ? 'Activando…' : 'Activar notificaciones'}
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -12,10 +12,10 @@ const FLAG_CODES: Record<string, string> = {
   Sweden: 'se',
   Germany: 'de',
   'Ivory Coast': 'ci',
-  'Cote d\u2019Ivoire': 'ci',
+  'Cote d’Ivoire': 'ci',
   Ecuador: 'ec',
-  'Curacao': 'cw',
-  'Cura\u00e7ao': 'cw',
+  Curacao: 'cw',
+  'Curaçao': 'cw',
   Tunisia: 'tn',
   Japan: 'jp',
   Senegal: 'sn',
@@ -52,7 +52,7 @@ const FLAG_CODES: Record<string, string> = {
   'Saudi Arabia': 'sa',
   Iran: 'ir',
   'Costa Rica': 'cr',
-  // --- Español (respaldo) ---
+  // --- Español (respaldo / datos de ejemplo) ---
   'Países Bajos': 'nl',
   Suecia: 'se',
   Alemania: 'de',
@@ -73,10 +73,65 @@ const FLAG_CODES: Record<string, string> = {
   Perú: 'pe',
 }
 
+// Traducción inglés -> español, solo para lo que se MUESTRA. Los nombres que
+// se escriben igual en ambos idiomas no necesitan entrada.
+const TEAM_ES: Record<string, string> = {
+  Netherlands: 'Países Bajos',
+  Sweden: 'Suecia',
+  Germany: 'Alemania',
+  'Ivory Coast': 'Costa de Marfil',
+  'Cote d’Ivoire': 'Costa de Marfil',
+  Curacao: 'Curazao',
+  'Curaçao': 'Curazao',
+  Tunisia: 'Túnez',
+  Japan: 'Japón',
+  Brazil: 'Brasil',
+  Mexico: 'México',
+  Spain: 'España',
+  France: 'Francia',
+  England: 'Inglaterra',
+  Scotland: 'Escocia',
+  Wales: 'Gales',
+  Belgium: 'Bélgica',
+  Italy: 'Italia',
+  Croatia: 'Croacia',
+  Morocco: 'Marruecos',
+  'United States': 'Estados Unidos',
+  USA: 'Estados Unidos',
+  Qatar: 'Catar',
+  Peru: 'Perú',
+  Poland: 'Polonia',
+  Denmark: 'Dinamarca',
+  Switzerland: 'Suiza',
+  'South Korea': 'Corea del Sur',
+  Cameroon: 'Camerún',
+  'Saudi Arabia': 'Arabia Saudita',
+  Iran: 'Irán',
+  Canada: 'Canadá',
+}
+
 /** Devuelve la URL SVG de la bandera, o null si no se conoce el equipo. */
 export function flagUrl(team: string): string | null {
   const code = FLAG_CODES[team.trim()]
   return code ? `https://flagcdn.com/${code}.svg` : null
+}
+
+/** Nombre del equipo en español si lo conocemos; si no, el original. */
+export function displayTeam(team: string): string {
+  return TEAM_ES[team.trim()] ?? team
+}
+
+/**
+ * Traduce nombres de equipos dentro de un texto libre (etiqueta del partido
+ * o "pick" del boleto), p. ej. "Spain gana" -> "España gana". Reemplaza cada
+ * nombre conocido por su versión en español.
+ */
+export function localize(text: string): string {
+  let out = text
+  for (const [en, es] of Object.entries(TEAM_ES)) {
+    out = out.replace(new RegExp(`\\b${en}\\b`, 'g'), es)
+  }
+  return out
 }
 
 /** "Netherlands vs. Sweden" -> ["Netherlands", "Sweden"] (o null). */

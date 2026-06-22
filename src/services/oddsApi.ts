@@ -9,7 +9,15 @@ export interface RawFixtureOdds {
   fixtureId: string
   label: string
   market: string
+  sport?: string // competición (clave The Odds API); ausente en datos de ejemplo
+  kickoff?: string // hora de inicio en ISO 8601 (puede faltar en datos de ejemplo)
   options: { pick: string; decimalOdds: number; outcomeCode: 'home' | 'draw' | 'away' }[]
+}
+
+/** Resultado real de un partido terminado, devuelto por ?scores=1. */
+export interface FixtureResult {
+  fixtureId: string
+  outcome: 'home' | 'draw' | 'away'
 }
 
 // Datos de respaldo para poder desarrollar y probar la interfaz sin
@@ -59,6 +67,18 @@ export async function fetchUpcomingOdds(sport?: string): Promise<RawFixtureOdds[
   return (await res.json()) as RawFixtureOdds[]
 }
 
+/**
+ * Resultados de partidos terminados de una competición, para resolver
+ * apuestas pendientes. Si no hay backend configurado, no hay resultados
+ * reales que consultar (los datos de ejemplo se resuelven a mano).
+ */
+export async function fetchScores(sport: string): Promise<FixtureResult[]> {
+  if (!GET_ODDS_URL) return []
+  const res = await fetch(`${GET_ODDS_URL}?scores=1&sport=${encodeURIComponent(sport)}`)
+  if (!res.ok) throw new Error(`No se pudieron obtener resultados (status ${res.status})`)
+  return (await res.json()) as FixtureResult[]
+}
+
 export function toBetSelection(
   fixture: RawFixtureOdds,
   option: RawFixtureOdds['options'][number]
@@ -70,5 +90,6 @@ export function toBetSelection(
     pick: option.pick,
     decimalOdds: option.decimalOdds,
     outcomeCode: option.outcomeCode,
+    sport: fixture.sport,
   }
 }

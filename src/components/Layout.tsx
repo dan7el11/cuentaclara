@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { subscribeToWallet } from '../services/walletService'
+import { listenForegroundPush } from '../services/push'
 import type { Wallet } from '../types'
 import LedgerBar from './LedgerBar'
 import ThresholdIntervention from './ThresholdIntervention'
@@ -20,6 +21,13 @@ export default function Layout({ children }: { children: ReactNode }) {
     if (!user) return
     return subscribeToWallet(user.uid, setWallet)
   }, [user])
+
+  // Muestra las push que llegan con la app abierta (FCM no las muestra solo).
+  useEffect(() => {
+    let stop = () => {}
+    listenForegroundPush().then((unsub) => (stop = unsub))
+    return () => stop()
+  }, [])
 
   const showThreshold =
     wallet != null &&

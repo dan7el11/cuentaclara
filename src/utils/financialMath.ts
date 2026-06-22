@@ -52,6 +52,19 @@ export function combinedOdds(selections: { decimalOdds: number }[]): number {
 }
 
 /**
+ * Margen de la casa (overround) de un mercado 1X2: la suma de las
+ * probabilidades implícitas de TODOS los resultados es mayor a 100%, y ese
+ * excedente es lo que la casa se queda en promedio pase lo que pase. Devuelve
+ * la fracción (ej. 0.075 = 7.5%); null si no hay cuotas válidas suficientes.
+ */
+export function bookmakerMargin(decimalOdds: number[]): number | null {
+  const valid = decimalOdds.filter((o) => o > 1)
+  if (valid.length < 2) return null
+  const overround = valid.reduce((acc, o) => acc + 1 / o, 0)
+  return overround - 1
+}
+
+/**
  * Tasa de acierto histórica del usuario en apuestas de probabilidad
  * implícita similar (mismo "balde" de cuota), para contextualizar si
  * una victoria fue una racha de suerte fuera de su patrón habitual.

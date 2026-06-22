@@ -1,25 +1,41 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { fetchUpcomingOdds, toBetSelection, type RawFixtureOdds } from '../services/oddsApi'
-import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
-import { combinedOdds } from '../utils/financialMath'
+import { placeBet, getBetHistory, resolveBet, resolvePendingBets } from '../services/walletService'
+import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
-import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flag'
+import BetHistory from '../components/BetHistory'
+import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 
 /**
- * Ligas para la barra superior desplegable (C3 / C7). El `id` está listo
- * para pasarse a `fetchUpcomingOdds(leagueId)` cuando la Cloud Function
- * `getOdds` acepte el parámetro `league`. Hoy los datos de respaldo lo
- * ignoran, así que el cambio de liga es visual.
+ * Ligas para la barra superior desplegable (C3 / C7). `sport` es la clave
+ * de The Odds API que se pasa a `fetchUpcomingOdds(sport)` para traer las
+ * cuotas reales de esa competición.
  */
 const LEAGUES = [
-  { id: 'wc2026', code: 'MU', name: 'Mundial 2026' },
-  { id: 'libertadores', code: 'CL', name: 'Copa Libertadores' },
-  { id: 'laliga', code: 'LL', name: 'LaLiga' },
-  { id: 'premier', code: 'PL', name: 'Premier League' },
-  { id: 'seriea', code: 'SA', name: 'Serie A' },
+  { id: 'wc2026', sport: 'soccer_fifa_world_cup', code: 'MU', name: 'Mundial 2026' },
+  { id: 'libertadores', sport: 'soccer_conmebol_copa_libertadores', code: 'CL', name: 'Copa Libertadores' },
+  { id: 'laliga', sport: 'soccer_spain_la_liga', code: 'LL', name: 'LaLiga' },
+  { id: 'premier', sport: 'soccer_epl', code: 'PL', name: 'Premier League' },
+  { id: 'seriea', sport: 'soccer_italy_serie_a', code: 'SA', name: 'Serie A' },
 ]
+
+/** "2026-06-22T16:00:00Z" -> "dom 22 jun · 11:00" (hora local del usuario). */
+function formatKickoff(iso?: string): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  return new Intl.DateTimeFormat('es-EC', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(d)
+    .replace(/\./g, '')
+}
 
 export default function Apuestas() {
   const { user } = useAuth()
@@ -29,12 +45,50 @@ export default function Apuestas() {
   const [pastBets, setPastBets] = useState<Bet[]>([])
   const [resultBet, setResultBet] = useState<Bet | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [oddsError, setOddsError] = useState<string | null>(null)
+  const [loadingOdds, setLoadingOdds] = useState(false)
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
   const [slipOpen, setSlipOpen] = useState(true)
 
+  // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
-    fetchUpcomingOdds().then(setFixtures)
-    if (user) getBetHistory(user.uid).then(setPastBets)
+    const lg = LEAGUES.find((l) => l.id === activeLeague) ?? LEAGUES[0]
+    setLoadingOdds(true)
+    setOddsError(null)
+    fetchUpcomingOdds(lg.sport)
+      .then((f) => setFixtures(f))
+      .catch((e) => {
+        setFixtures([])
+        setOddsError(e instanceof Error ? e.message : 'No se pudieron cargar las cuotas')
+      })
+      .finally(() => setLoadingOdds(false))
+  }, [activeLeague])
+
+  // Al entrar: resuelve apuestas pendientes con resultados reales y, si
+  // alguna se resolvió ahora, muestra su análisis.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    ;(async () => {
+      let resolvedIds: string[] = []
+      try {
+        resolvedIds = await resolvePendingBets(user.uid)
+      } catch {
+        // Sin resultados disponibles: las apuestas siguen pendientes.
+      }
+      const history = await getBetHistory(user.uid)
+      if (cancelled) return
+      setPastBets(history)
+      if (resolvedIds.length > 0) {
+        const justResolved = history.find(
+          (b) => resolvedIds.includes(b.id) && b.status !== 'pending'
+        )
+        if (justResolved) setResultBet(justResolved)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [user])
 
   function toggleSelection(
@@ -114,10 +168,7 @@ export default function Apuestas() {
             return (
               <button
                 key={lg.id}
-                onClick={() => {
-                  setActiveLeague(lg.id)
-                  // Listo para: fetchUpcomingOdds(lg.id).then(setFixtures)
-                }}
+                onClick={() => setActiveLeague(lg.id)}
                 className={`flex flex-none items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors ${
                   active
                     ? 'border-slate bg-slate/10 text-slate shadow-sm'
@@ -137,8 +188,27 @@ export default function Apuestas() {
           })}
         </div>
 
+        {/* Aviso de error real al cargar cuotas (ya no se traga en silencio) */}
+        {oddsError && (
+          <div className="border-b border-burgundy/30 bg-burgundy/5 px-6 py-4 text-sm text-burgundy">
+            <p className="font-medium">No pudimos cargar las cuotas de esta competición.</p>
+            <p className="mt-1 text-burgundy/80">{oddsError}</p>
+            <p className="mt-1 text-xs text-burgundy/60">
+              Puede ser que no haya partidos programados ahora mismo, que se haya agotado la
+              cuota mensual de la API, o que falte configurar la clave en el servidor.
+            </p>
+          </div>
+        )}
+
+        {/* Estado de carga mientras llegan las cuotas */}
+        {loadingOdds && !oddsError && (
+          <div className="border-b border-paperline px-6 py-8 text-center text-sm text-ink/50">
+            Cargando cuotas…
+          </div>
+        )}
+
         {/* Partido destacado, integrado en el panel (C6 / C8 / C11 / C14) */}
-        {featured && (
+        {featured && !loadingOdds && (
           <FeaturedFixture
             fixture={featured}
             selections={selections}
@@ -146,8 +216,8 @@ export default function Apuestas() {
           />
         )}
 
-        {/* Cuerpo: lista + boleto */}
-        <div className="flex items-stretch">
+        {/* Cuerpo: lista + boleto (en columna en celular, lado a lado en desktop) */}
+        <div className="flex flex-col md:flex-row md:items-stretch">
           {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
           <section className="min-w-0 flex-1 p-4">
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/45">Más partidos</p>
@@ -161,7 +231,7 @@ export default function Apuestas() {
                   onPick={toggleSelection}
                 />
               ))}
-              {listFixtures.length === 0 && (
+              {listFixtures.length === 0 && !loadingOdds && !oddsError && (
                 <p className="py-6 text-center text-sm text-ink/50">
                   No hay más partidos disponibles ahora mismo.
                 </p>
@@ -171,8 +241,8 @@ export default function Apuestas() {
 
           {/* Boleto colapsable / minimizable (C4) */}
           <aside
-            className={`flex-none border-l border-paperline bg-paper/50 transition-all ${
-              slipOpen ? 'w-[300px]' : 'w-14'
+            className={`flex-none border-t border-paperline bg-paper/50 transition-all md:border-l md:border-t-0 ${
+              slipOpen ? 'w-full md:w-[300px]' : 'w-full md:w-14'
             }`}
           >
             {slipOpen ? (
@@ -206,8 +276,8 @@ export default function Apuestas() {
                         <div key={s.fixtureId + s.pick} className="px-4 py-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-ink">{s.pick}</p>
-                              <p className="figure mt-0.5 text-[11px] text-ink/50">{s.fixtureLabel}</p>
+                              <p className="text-sm font-medium text-ink">{localize(s.pick)}</p>
+                              <p className="figure mt-0.5 text-[11px] text-ink/50">{localize(s.fixtureLabel)}</p>
                             </div>
                             <span className="figure text-sm font-semibold text-slate">
                               {s.decimalOdds.toFixed(2)}
@@ -260,7 +330,7 @@ export default function Apuestas() {
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 py-4">
+              <div className="flex items-center justify-center gap-3 py-3 md:flex-col md:py-4">
                 <button
                   onClick={() => setSlipOpen(true)}
                   title="Abrir boleto"
@@ -273,7 +343,7 @@ export default function Apuestas() {
                     {selections.length}
                   </span>
                 )}
-                <span className="font-serif text-sm text-ink/50 [writing-mode:vertical-rl] [transform:rotate(180deg)]">
+                <span className="font-serif text-sm text-ink/50 md:[writing-mode:vertical-rl] md:[transform:rotate(180deg)]">
                   Boleto
                 </span>
               </div>
@@ -281,6 +351,9 @@ export default function Apuestas() {
           </aside>
         </div>
       </div>
+
+      {/* Historial: la pérdida acumulada, visible apuesta por apuesta */}
+      <BetHistory bets={pastBets} />
 
       {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
       {resultBet && resultBet.status !== 'pending' && (
@@ -296,29 +369,53 @@ export default function Apuestas() {
       {resultBet && resultBet.status === 'pending' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
           <div className="w-full max-w-sm rounded-lg bg-paper p-6 text-center">
-            <p className="text-sm text-ink/70">
-              Apuesta registrada. Esto solo existe para que pruebes el flujo completo en este
-              MVP — en producción el resultado lo decide el partido real, no un botón:
-            </p>
-            <div className="mt-4 flex justify-center gap-3">
-              <button
-                onClick={() => demoResolve(true)}
-                className="rounded bg-sage px-3 py-1.5 text-sm text-paper"
-              >
-                Simular que ganó
-              </button>
-              <button
-                onClick={() => demoResolve(false)}
-                className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper"
-              >
-                Simular que perdió
-              </button>
-            </div>
+            {isMockBet(resultBet) ? (
+              <>
+                {/* Datos de ejemplo (sin partido real): se resuelven a mano */}
+                <p className="text-sm text-ink/70">
+                  Apuesta registrada. Estos son datos de ejemplo, así que el resultado lo
+                  eliges tú. Con cuotas reales, lo decide el partido:
+                </p>
+                <div className="mt-4 flex justify-center gap-3">
+                  <button
+                    onClick={() => demoResolve(true)}
+                    className="rounded bg-sage px-3 py-1.5 text-sm text-paper"
+                  >
+                    Simular que ganó
+                  </button>
+                  <button
+                    onClick={() => demoResolve(false)}
+                    className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper"
+                  >
+                    Simular que perdió
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Apuesta real: se resolverá sola cuando termine el partido */}
+                <p className="text-sm text-ink/70">
+                  Apuesta registrada. Se resolverá sola cuando termine el partido: la próxima
+                  vez que abras la app, el resultado real decidirá si ganaste o perdiste.
+                </p>
+                <button
+                  onClick={() => setResultBet(null)}
+                  className="mt-4 rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark"
+                >
+                  Entendido
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
     </div>
   )
+}
+
+/** Una apuesta es "de ejemplo" si todas sus selecciones son datos mock. */
+function isMockBet(bet: Bet): boolean {
+  return bet.selections.every((s) => s.fixtureId.startsWith('mock-'))
 }
 
 /* ----------------------------------------------------------------------- */
@@ -337,6 +434,8 @@ function FeaturedFixture({
   onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
 }) {
   const teams = teamsFromLabel(fixture.label)
+  const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
+  const kickoff = formatKickoff(fixture.kickoff)
   return (
     <div
       className="relative overflow-hidden border-b border-paperline px-6 py-5 text-paper"
@@ -363,7 +462,9 @@ function FeaturedFixture({
               <span className="h-1.5 w-1.5 rounded-full bg-paper" />
               DESTACADO
             </span>
-            <span className="text-xs font-medium uppercase tracking-[0.1em] text-paper/55">Partido destacado</span>
+            <span className="text-xs font-medium uppercase tracking-[0.1em] text-paper/55">
+              {kickoff ?? 'Partido destacado'}
+            </span>
           </div>
           {teams ? (
             <div className="flex items-center gap-3 font-serif text-2xl">
@@ -377,7 +478,16 @@ function FeaturedFixture({
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-right text-[11px] font-medium uppercase tracking-[0.1em] text-paper/55">{fixture.market}</span>
+          <div className="text-right">
+            <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-paper/55">
+              {fixture.market}
+            </span>
+            {margin != null && (
+              <p className="text-[11px] text-ochre" title="Suma de probabilidades por encima del 100%: lo que la casa se queda en promedio.">
+                La casa se queda ~{(margin * 100).toFixed(1)}%
+              </p>
+            )}
+          </div>
           <div className="flex gap-2">
             {fixture.options.map((opt) => {
               const active = selections.some(
@@ -420,7 +530,7 @@ function TeamName({ name }: { name: string }) {
           {name.slice(0, 3).toUpperCase()}
         </span>
       )}
-      {name}
+      {displayTeam(name)}
     </span>
   )
 }
@@ -439,6 +549,8 @@ function FixtureRow({
   onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
 }) {
   const teams = teamsFromLabel(fixture.label)
+  const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
+  const kickoff = formatKickoff(fixture.kickoff)
   return (
     <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 px-2 py-3 transition-colors hover:bg-paper/50">
       <div className="min-w-0">
@@ -450,7 +562,13 @@ function FixtureRow({
         ) : (
           <span className="text-sm font-medium text-ink">{fixture.label}</span>
         )}
-        <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">{fixture.market}</p>
+        <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">
+          {kickoff && <span>{kickoff} · </span>}
+          {fixture.market}
+          {margin != null && (
+            <span className="text-ochre"> · casa ~{(margin * 100).toFixed(1)}%</span>
+          )}
+        </p>
       </div>
 
       {fixture.options.map((opt) => {
@@ -486,7 +604,7 @@ function RowTeam({ name }: { name: string }) {
           {name.slice(0, 2).toUpperCase()}
         </span>
       )}
-      <span className="truncate text-sm font-medium text-ink">{name}</span>
+      <span className="truncate text-sm font-medium text-ink">{displayTeam(name)}</span>
     </div>
   )
 }
