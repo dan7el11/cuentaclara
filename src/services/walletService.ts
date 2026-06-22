@@ -8,12 +8,11 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy,
   getDocs,
   runTransaction,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import type { Bet, BetSelection, Wallet } from '../types'
+import type { Bet, BetSelection, Transaction, Wallet } from '../types'
 import { combinedOdds, impliedProbability } from '../utils/financialMath'
 import { fetchScores } from './oddsApi'
 
@@ -158,11 +157,48 @@ export async function resolvePendingBets(uid: string): Promise<string[]> {
 }
 
 export async function getBetHistory(uid: string): Promise<Bet[]> {
-  const q = query(
-    collection(db, 'bets'),
-    where('uid', '==', uid),
-    orderBy('placedAt', 'desc')
-  )
+  // Filtramos solo por uid (índice automático de un solo campo) y ordenamos
+  // en el cliente. Así no exigimos un índice compuesto de Firestore, que de
+  // otro modo haría fallar esta consulta en producción.
+  const q = query(collection(db, 'bets'), where('uid', '==', uid))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Bet, 'id'>) }))
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<Bet, 'id'>) }))
+    .sort((a, b) => b.placedAt - a.placedAt)
+}
+
+/** Movimientos recientes de la cuenta (recargas, apuestas, pagos). */
+export async function getRecentTransactions(uid: string, max = 8): Promise<Transaction[]> {
+  const q = query(collection(db, 'transactions'), where('uid', '==', uid))
+  const snap = await getDocs(q)
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<Transaction, 'id'>) }))
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, max)
+}
+
+/**
+ * Recarga el saldo ficticio. Lo registramos como un movimiento más
+ * (`deposit_sim`) para que el extracto sea honesto: en una casa real, este
+ * es justo el momento en que alguien que ya iba perdiendo "vuelve a cargar".
+ */
+export async function deposit(uid: string, amount: number): Promise<void> {
+  if (!(amount > 0)) throw new Error('El monto debe ser mayor a cero')
+  const walletRef = doc(db, 'wallets', uid)
+
+  const balanceAfter = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(walletRef)
+    if (!snap.exists()) throw new Error('Billetera no encontrada')
+    const w = snap.data() as Wallet
+    tx.update(walletRef, { balance: increment(amount) })
+    return w.balance + amount
+  })
+
+  await addDoc(collection(db, 'transactions'), {
+    uid,
+    type: 'deposit_sim',
+    amount,
+    balanceAfter,
+    createdAt: Date.now(),
+  })
 }

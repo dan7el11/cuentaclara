@@ -31,6 +31,32 @@ export function estimateOpportunityCost(
   }
 }
 
+/**
+ * Pérdida esperada por el margen de la casa al apostar repetidamente.
+ * Si cada dólar apostado pierde, en promedio, la fracción `margin` (overround),
+ * apostar un total de `totalWagered` deja una pérdida esperada de
+ * totalWagered * margin. No es "mala suerte": es el diseño del juego.
+ */
+export function expectedLossFromWagering(totalWagered: number, margin = 0.07): number {
+  return Math.round(totalWagered * margin * 100) / 100
+}
+
+/**
+ * Valor futuro de aportes periódicos (anualidad ordinaria). Sirve para
+ * comparar "apostar $X por semana" contra "invertir $X por semana".
+ */
+export function futureValueOfContributions(
+  perWeek: number,
+  years: number,
+  annualReturn = 0.08
+): number {
+  const n = Math.round(years * 52)
+  const r = annualReturn / 52
+  if (r === 0) return Math.round(perWeek * n * 100) / 100
+  const fv = perWeek * ((Math.pow(1 + r, n) - 1) / r)
+  return Math.round(fv * 100) / 100
+}
+
 /** Probabilidad implícita que el mercado de apuestas le asigna a un resultado. */
 export function impliedProbability(decimalOdds: number): number {
   if (decimalOdds <= 1) return 1
