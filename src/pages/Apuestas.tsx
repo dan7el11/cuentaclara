@@ -20,6 +20,22 @@ const LEAGUES = [
   { id: 'seriea', sport: 'soccer_italy_serie_a', code: 'SA', name: 'Serie A' },
 ]
 
+/** "2026-06-22T16:00:00Z" -> "dom 22 jun · 11:00" (hora local del usuario). */
+function formatKickoff(iso?: string): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  return new Intl.DateTimeFormat('es-EC', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(d)
+    .replace(/\./g, '')
+}
+
 export default function Apuestas() {
   const { user } = useAuth()
   const [fixtures, setFixtures] = useState<RawFixtureOdds[]>([])
@@ -359,6 +375,7 @@ function FeaturedFixture({
 }) {
   const teams = teamsFromLabel(fixture.label)
   const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
+  const kickoff = formatKickoff(fixture.kickoff)
   return (
     <div className="border-b border-paperline bg-slatedark px-6 py-5 text-paper">
       <div className="flex flex-wrap items-center justify-between gap-5">
@@ -368,7 +385,7 @@ function FeaturedFixture({
               <span className="h-1.5 w-1.5 rounded-full bg-paper" />
               DESTACADO
             </span>
-            <span className="text-xs font-medium text-paper/60">Partido destacado</span>
+            <span className="text-xs font-medium text-paper/60">{kickoff ?? 'Partido destacado'}</span>
           </div>
           {teams ? (
             <div className="flex items-center gap-3 font-serif text-2xl">
@@ -452,6 +469,7 @@ function FixtureRow({
 }) {
   const teams = teamsFromLabel(fixture.label)
   const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
+  const kickoff = formatKickoff(fixture.kickoff)
   return (
     <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-paper/60">
       <div className="min-w-0">
@@ -464,6 +482,7 @@ function FixtureRow({
           <span className="text-sm font-medium text-ink">{fixture.label}</span>
         )}
         <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">
+          {kickoff && <span>{kickoff} · </span>}
           {fixture.market}
           {margin != null && (
             <span className="text-ochre"> · casa ~{(margin * 100).toFixed(1)}%</span>

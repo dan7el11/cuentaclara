@@ -9,6 +9,7 @@ export interface RawFixtureOdds {
   fixtureId: string
   label: string
   market: string
+  kickoff?: string // hora de inicio en ISO 8601 (puede faltar en datos de ejemplo)
   options: { pick: string; decimalOdds: number; outcomeCode: 'home' | 'draw' | 'away' }[]
 }
 
