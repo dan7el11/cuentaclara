@@ -10,6 +10,7 @@ import {
   where,
   orderBy,
   getDocs,
+  runTransaction,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Bet, BetSelection, Wallet } from '../types'
@@ -72,38 +73,41 @@ export async function placeBet(
 }
 
 /**
- * Resuelve una apuesta pendiente. En el MVP esto se dispara manualmente
- * o desde un cron que consulta resultados reales; más adelante conviene
- * moverlo a una Cloud Function para que no dependa del cliente.
+ * Resuelve una apuesta pendiente. Es IDEMPOTENTE: dentro de una transacción
+ * comprueba que la apuesta siga `pending` antes de tocar el saldo, así nunca
+ * se paga dos veces aunque el cron del servidor la resuelva al mismo tiempo.
  */
 export async function resolveBet(betId: string, won: boolean): Promise<void> {
   const betRef = doc(db, 'bets', betId)
-  const betSnap = await getDoc(betRef)
-  if (!betSnap.exists()) throw new Error('Apuesta no encontrada')
-  const bet = betSnap.data() as Bet
 
-  const walletRef = doc(db, 'wallets', bet.uid)
-  const payout = won ? bet.potentialPayout : 0
-  const netResult = payout - bet.stake
+  const applied = await runTransaction(db, async (tx) => {
+    const betSnap = await tx.get(betRef)
+    if (!betSnap.exists()) throw new Error('Apuesta no encontrada')
+    const bet = betSnap.data() as Bet
+    if (bet.status !== 'pending') return null // ya resuelta (p. ej. por el cron)
 
-  await updateDoc(betRef, {
-    status: won ? 'won' : 'lost',
-    resolvedAt: Date.now(),
+    const walletRef = doc(db, 'wallets', bet.uid)
+    const payout = won ? bet.potentialPayout : 0
+    const netResult = payout - bet.stake
+
+    tx.update(betRef, { status: won ? 'won' : 'lost', resolvedAt: Date.now() })
+    tx.update(walletRef, {
+      balance: increment(payout),
+      totalWon: increment(won ? netResult : 0),
+      totalLost: increment(won ? 0 : bet.stake),
+    })
+    return { uid: bet.uid, payout }
   })
 
-  await updateDoc(walletRef, {
-    balance: increment(payout),
-    totalWon: increment(won ? netResult : 0),
-    totalLost: increment(won ? 0 : bet.stake),
-  })
+  if (!applied) return
 
-  const walletSnap = await getDoc(walletRef)
+  const walletSnap = await getDoc(doc(db, 'wallets', applied.uid))
   const balanceAfter = (walletSnap.data() as Wallet).balance
 
   await addDoc(collection(db, 'transactions'), {
-    uid: bet.uid,
+    uid: applied.uid,
     type: won ? 'bet_won' : 'bet_lost',
-    amount: won ? payout : 0,
+    amount: won ? applied.payout : 0,
     balanceAfter,
     betId,
     createdAt: Date.now(),
