@@ -48,6 +48,9 @@ export default async () => {
 
   const db = initAdmin()
 
+  // Para cuidar la cuota de The Odds API (500/mes), primero consultamos
+  // Firestore (lecturas baratas) y SOLO llamamos a la API de resultados si
+  // de verdad hay apuestas pendientes. Si no hay, salimos sin gastar nada.
   const pendingSnap = await db.collection('bets').where('status', '==', 'pending').limit(300).get()
   if (pendingSnap.empty) return new Response('Sin apuestas pendientes')
 
@@ -162,5 +165,7 @@ async function notify(db: any, uid: string, won: boolean, bet: any) {
   }
 }
 
-// Netlify ejecuta esta función según el cron (cada 30 minutos).
-export const config = { schedule: '*/30 * * * *' }
+// Netlify ejecuta esta función cada 15 minutos. No pasa nada por correr
+// seguido: si no hay apuestas pendientes, no llama a The Odds API y no
+// consume cuota (solo una lectura barata de Firestore).
+export const config = { schedule: '*/15 * * * *' }
