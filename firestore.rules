@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para CuentaClara.
+//
+// Cómo aplicarlas: Firebase Console > Firestore Database > pestaña "Rules",
+// pegá este contenido y publicá. (O `firebase deploy --only firestore:rules`.)
+//
+// Idea: cada usuario solo puede tocar SUS propios datos. El cron del
+// servidor usa firebase-admin (cuenta de servicio), que se salta estas
+// reglas, así que puede resolver apuestas y pagar saldos sin problema.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Billetera: el dueño la lee y la escribe (saldo, recargas, fcmTokens).
+    match /wallets/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Tarjeta ficticia: solo lectura del dueño (se crea en el registro).
+    match /cards/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Apuestas: el dueño crea/lee/actualiza las suyas.
+    match /bets/{betId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.uid;
+      allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // Movimientos: el dueño los lee y los crea (extracto de actividad).
+    match /transactions/{id} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.uid;
+    }
+  }
+}
