@@ -1,87 +1,113 @@
 // Banderas reales (no emoji) a partir del nombre del equipo.
 //
-// The Odds API entrega los equipos EN INGLÉS ("Spain vs. England"), así que
-// el mapa principal está en inglés. Mantenemos también las claves en español
-// para los datos de ejemplo (MOCK_FIXTURES) y compatibilidad hacia atrás.
-// Si un equipo no está, devolvemos null y la UI muestra un marcador neutro
-// en lugar de una bandera rota.
+// IMPORTANTE: The Odds API (soccer) devuelve los nombres de selección en
+// INGLÉS ("Netherlands vs. Sweden"), así que el mapa principal está en
+// inglés. Mantenemos también los nombres en español por si algún feed o
+// dato de respaldo los usa. Si un equipo no está, devolvemos null y la UI
+// muestra un marcador con iniciales en lugar de una bandera rota.
 
 const FLAG_CODES: Record<string, string> = {
-  // Inglés (como los entrega The Odds API)
-  Spain: 'es',
-  England: 'gb-eng',
+  // --- Inglés (The Odds API) ---
+  Netherlands: 'nl',
+  Sweden: 'se',
+  Germany: 'de',
+  'Ivory Coast': 'ci',
+  'Cote d’Ivoire': 'ci',
+  Ecuador: 'ec',
+  Curacao: 'cw',
+  'Curaçao': 'cw',
+  Tunisia: 'tn',
+  Japan: 'jp',
+  Senegal: 'sn',
   Brazil: 'br',
   Argentina: 'ar',
   Mexico: 'mx',
   Uruguay: 'uy',
+  Spain: 'es',
   France: 'fr',
+  England: 'gb-eng',
+  Scotland: 'gb-sct',
+  Wales: 'gb-wls',
   Portugal: 'pt',
-  Netherlands: 'nl',
-  Germany: 'de',
+  Belgium: 'be',
+  Italy: 'it',
   Croatia: 'hr',
+  Morocco: 'ma',
+  'United States': 'us',
+  USA: 'us',
+  Canada: 'ca',
+  Qatar: 'qa',
   Colombia: 'co',
   Chile: 'cl',
   Peru: 'pe',
-  'United States': 'us',
-  Qatar: 'qa',
-  Belgium: 'be',
-  Italy: 'it',
-  Japan: 'jp',
-  Morocco: 'ma',
-  Ecuador: 'ec',
-  Senegal: 'sn',
-  Canada: 'ca',
-  'South Korea': 'kr',
-  Switzerland: 'ch',
-  Denmark: 'dk',
   Poland: 'pl',
+  Denmark: 'dk',
+  Switzerland: 'ch',
   Serbia: 'rs',
+  'South Korea': 'kr',
   Australia: 'au',
   Ghana: 'gh',
-  Nigeria: 'ng',
   Cameroon: 'cm',
-  // Español (datos de ejemplo / compatibilidad)
-  España: 'es',
+  Nigeria: 'ng',
+  'Saudi Arabia': 'sa',
+  Iran: 'ir',
+  'Costa Rica': 'cr',
+  // --- Español (respaldo / datos de ejemplo) ---
+  'Países Bajos': 'nl',
+  Suecia: 'se',
+  Alemania: 'de',
+  'Costa de Marfil': 'ci',
+  Túnez: 'tn',
+  Japón: 'jp',
   Brasil: 'br',
   México: 'mx',
+  España: 'es',
   Francia: 'fr',
   Inglaterra: 'gb-eng',
-  'Países Bajos': 'nl',
-  Alemania: 'de',
-  Croacia: 'hr',
-  Perú: 'pe',
-  'Estados Unidos': 'us',
-  Catar: 'qa',
   Bélgica: 'be',
   Italia: 'it',
-  Japón: 'jp',
+  Croacia: 'hr',
   Marruecos: 'ma',
+  'Estados Unidos': 'us',
+  Catar: 'qa',
+  Perú: 'pe',
 }
 
 // Traducción inglés -> español, solo para lo que se MUESTRA. Los nombres que
 // se escriben igual en ambos idiomas no necesitan entrada.
 const TEAM_ES: Record<string, string> = {
-  Spain: 'España',
-  England: 'Inglaterra',
+  Netherlands: 'Países Bajos',
+  Sweden: 'Suecia',
+  Germany: 'Alemania',
+  'Ivory Coast': 'Costa de Marfil',
+  'Cote d’Ivoire': 'Costa de Marfil',
+  Curacao: 'Curazao',
+  'Curaçao': 'Curazao',
+  Tunisia: 'Túnez',
+  Japan: 'Japón',
   Brazil: 'Brasil',
   Mexico: 'México',
+  Spain: 'España',
   France: 'Francia',
-  Netherlands: 'Países Bajos',
-  Germany: 'Alemania',
-  Croatia: 'Croacia',
-  Peru: 'Perú',
-  'United States': 'Estados Unidos',
-  Qatar: 'Catar',
+  England: 'Inglaterra',
+  Scotland: 'Escocia',
+  Wales: 'Gales',
   Belgium: 'Bélgica',
   Italy: 'Italia',
-  Japan: 'Japón',
+  Croatia: 'Croacia',
   Morocco: 'Marruecos',
-  'South Korea': 'Corea del Sur',
-  Switzerland: 'Suiza',
-  Denmark: 'Dinamarca',
+  'United States': 'Estados Unidos',
+  USA: 'Estados Unidos',
+  Qatar: 'Catar',
+  Peru: 'Perú',
   Poland: 'Polonia',
-  Canada: 'Canadá',
+  Denmark: 'Dinamarca',
+  Switzerland: 'Suiza',
+  'South Korea': 'Corea del Sur',
   Cameroon: 'Camerún',
+  'Saudi Arabia': 'Arabia Saudita',
+  Iran: 'Irán',
+  Canada: 'Canadá',
 }
 
 /** Devuelve la URL SVG de la bandera, o null si no se conoce el equipo. */
@@ -108,7 +134,7 @@ export function localize(text: string): string {
   return out
 }
 
-/** "Ecuador vs. Senegal" -> ["Ecuador", "Senegal"] (o null si no se puede dividir). */
+/** "Netherlands vs. Sweden" -> ["Netherlands", "Sweden"] (o null). */
 export function teamsFromLabel(label: string): [string, string] | null {
   const parts = label.split(/\s+vs\.?\s+/i)
   if (parts.length === 2) return [parts[0].trim(), parts[1].trim()]
