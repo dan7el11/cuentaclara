@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { fetchUpcomingOdds, toBetSelection, type RawFixtureOdds } from '../services/oddsApi'
 import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
-import { combinedOdds } from '../utils/financialMath'
+import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
-import { flagUrl, teamsFromLabel, outcomeSymbol } from '../utils/flag'
+import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 
 /**
  * Ligas para la barra superior desplegable (C3 / C7). `sport` es la clave
@@ -28,15 +28,23 @@ export default function Apuestas() {
   const [pastBets, setPastBets] = useState<Bet[]>([])
   const [resultBet, setResultBet] = useState<Bet | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [oddsError, setOddsError] = useState<string | null>(null)
+  const [loadingOdds, setLoadingOdds] = useState(false)
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
   const [slipOpen, setSlipOpen] = useState(true)
 
   // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
     const lg = LEAGUES.find((l) => l.id === activeLeague) ?? LEAGUES[0]
+    setLoadingOdds(true)
+    setOddsError(null)
     fetchUpcomingOdds(lg.sport)
-      .then(setFixtures)
-      .catch(() => setFixtures([]))
+      .then((f) => setFixtures(f))
+      .catch((e) => {
+        setFixtures([])
+        setOddsError(e instanceof Error ? e.message : 'No se pudieron cargar las cuotas')
+      })
+      .finally(() => setLoadingOdds(false))
   }, [activeLeague])
 
   useEffect(() => {
@@ -132,8 +140,27 @@ export default function Apuestas() {
           })}
         </div>
 
+        {/* Aviso de error real al cargar cuotas (ya no se traga en silencio) */}
+        {oddsError && (
+          <div className="border-b border-burgundy/30 bg-burgundy/5 px-6 py-4 text-sm text-burgundy">
+            <p className="font-medium">No pudimos cargar las cuotas de esta competición.</p>
+            <p className="mt-1 text-burgundy/80">{oddsError}</p>
+            <p className="mt-1 text-xs text-burgundy/60">
+              Puede ser que no haya partidos programados ahora mismo, que se haya agotado la
+              cuota mensual de la API, o que falte configurar la clave en el servidor.
+            </p>
+          </div>
+        )}
+
+        {/* Estado de carga mientras llegan las cuotas */}
+        {loadingOdds && !oddsError && (
+          <div className="border-b border-paperline px-6 py-8 text-center text-sm text-ink/50">
+            Cargando cuotas…
+          </div>
+        )}
+
         {/* Partido destacado, integrado en el panel (C6 / C8 / C11 / C14) */}
-        {featured && (
+        {featured && !loadingOdds && (
           <FeaturedFixture
             fixture={featured}
             selections={selections}
@@ -155,7 +182,7 @@ export default function Apuestas() {
                   onPick={toggleSelection}
                 />
               ))}
-              {listFixtures.length === 0 && (
+              {listFixtures.length === 0 && !loadingOdds && !oddsError && (
                 <p className="py-6 text-center text-sm text-ink/50">
                   No hay más partidos disponibles ahora mismo.
                 </p>
@@ -200,8 +227,8 @@ export default function Apuestas() {
                         <div key={s.fixtureId + s.pick} className="px-4 py-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-ink">{s.pick}</p>
-                              <p className="figure mt-0.5 text-[11px] text-ink/50">{s.fixtureLabel}</p>
+                              <p className="text-sm font-medium text-ink">{localize(s.pick)}</p>
+                              <p className="figure mt-0.5 text-[11px] text-ink/50">{localize(s.fixtureLabel)}</p>
                             </div>
                             <span className="figure text-sm font-semibold text-slate">
                               {s.decimalOdds.toFixed(2)}
@@ -331,6 +358,7 @@ function FeaturedFixture({
   onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
 }) {
   const teams = teamsFromLabel(fixture.label)
+  const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
   return (
     <div className="border-b border-paperline bg-slatedark px-6 py-5 text-paper">
       <div className="flex flex-wrap items-center justify-between gap-5">
@@ -354,7 +382,14 @@ function FeaturedFixture({
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-right text-[11px] font-medium text-paper/60">{fixture.market}</span>
+          <div className="text-right">
+            <span className="text-[11px] font-medium text-paper/60">{fixture.market}</span>
+            {margin != null && (
+              <p className="text-[11px] text-ochre" title="Suma de probabilidades por encima del 100%: lo que la casa se queda en promedio.">
+                La casa se queda ~{(margin * 100).toFixed(1)}%
+              </p>
+            )}
+          </div>
           <div className="flex gap-2">
             {fixture.options.map((opt) => {
               const active = selections.some(
@@ -397,7 +432,7 @@ function TeamName({ name }: { name: string }) {
           {name.slice(0, 3).toUpperCase()}
         </span>
       )}
-      {name}
+      {displayTeam(name)}
     </span>
   )
 }
@@ -416,6 +451,7 @@ function FixtureRow({
   onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
 }) {
   const teams = teamsFromLabel(fixture.label)
+  const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
   return (
     <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-paper/60">
       <div className="min-w-0">
@@ -427,7 +463,12 @@ function FixtureRow({
         ) : (
           <span className="text-sm font-medium text-ink">{fixture.label}</span>
         )}
-        <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">{fixture.market}</p>
+        <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">
+          {fixture.market}
+          {margin != null && (
+            <span className="text-ochre"> · casa ~{(margin * 100).toFixed(1)}%</span>
+          )}
+        </p>
       </div>
 
       {fixture.options.map((opt) => {
@@ -463,7 +504,7 @@ function RowTeam({ name }: { name: string }) {
           {name.slice(0, 2).toUpperCase()}
         </span>
       )}
-      <span className="truncate text-sm font-medium text-ink">{name}</span>
+      <span className="truncate text-sm font-medium text-ink">{displayTeam(name)}</span>
     </div>
   )
 }
