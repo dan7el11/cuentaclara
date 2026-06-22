@@ -14,6 +14,7 @@ import {
 import { db } from '../firebase'
 import type { Bet, BetSelection, Wallet } from '../types'
 import { combinedOdds, impliedProbability } from '../utils/financialMath'
+import { fetchScores } from './oddsApi'
 
 export function subscribeToWallet(uid: string, cb: (wallet: Wallet | null) => void) {
   return onSnapshot(doc(db, 'wallets', uid), (snap) => {
@@ -107,6 +108,49 @@ export async function resolveBet(betId: string, won: boolean): Promise<void> {
     betId,
     createdAt: Date.now(),
   })
+}
+
+/**
+ * Resuelve automáticamente las apuestas pendientes contra los resultados
+ * REALES de los partidos (endpoint /scores). Una combinada gana solo si
+ * TODAS sus selecciones aciertan; si a alguna selección todavía le falta el
+ * resultado, la apuesta queda pendiente. Devuelve los ids resueltos en esta
+ * pasada (para poder mostrar el análisis al usuario).
+ */
+export async function resolvePendingBets(uid: string): Promise<string[]> {
+  const bets = await getBetHistory(uid)
+  const pending = bets.filter((b) => b.status === 'pending')
+  if (pending.length === 0) return []
+
+  // Solo apuestas con resultado real consultable (tienen `sport`; las de
+  // ejemplo/mock no, y se resuelven a mano desde la pantalla de apuestas).
+  const sports = [
+    ...new Set(
+      pending.flatMap((b) => b.selections.map((s) => s.sport)).filter((s): s is string => !!s)
+    ),
+  ]
+  if (sports.length === 0) return []
+
+  const outcomeByFixture = new Map<string, BetSelection['outcomeCode']>()
+  for (const sport of sports) {
+    try {
+      const results = await fetchScores(sport)
+      for (const r of results) outcomeByFixture.set(r.fixtureId, r.outcome)
+    } catch {
+      // Si una competición falla, seguimos con las demás; sus apuestas
+      // simplemente quedan pendientes hasta la próxima pasada.
+    }
+  }
+
+  const resolvedIds: string[] = []
+  for (const bet of pending) {
+    const outcomes = bet.selections.map((s) => outcomeByFixture.get(s.fixtureId))
+    if (outcomes.some((o) => o === undefined)) continue // falta algún resultado
+    const won = bet.selections.every((s, i) => outcomes[i] === s.outcomeCode)
+    await resolveBet(bet.id, won)
+    resolvedIds.push(bet.id)
+  }
+  return resolvedIds
 }
 
 export async function getBetHistory(uid: string): Promise<Bet[]> {

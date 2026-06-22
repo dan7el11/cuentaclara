@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { fetchUpcomingOdds, toBetSelection, type RawFixtureOdds } from '../services/oddsApi'
-import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
+import { placeBet, getBetHistory, resolveBet, resolvePendingBets } from '../services/walletService'
 import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
@@ -64,8 +64,31 @@ export default function Apuestas() {
       .finally(() => setLoadingOdds(false))
   }, [activeLeague])
 
+  // Al entrar: resuelve apuestas pendientes con resultados reales y, si
+  // alguna se resolvió ahora, muestra su análisis.
   useEffect(() => {
-    if (user) getBetHistory(user.uid).then(setPastBets)
+    if (!user) return
+    let cancelled = false
+    ;(async () => {
+      let resolvedIds: string[] = []
+      try {
+        resolvedIds = await resolvePendingBets(user.uid)
+      } catch {
+        // Sin resultados disponibles: las apuestas siguen pendientes.
+      }
+      const history = await getBetHistory(user.uid)
+      if (cancelled) return
+      setPastBets(history)
+      if (resolvedIds.length > 0) {
+        const justResolved = history.find(
+          (b) => resolvedIds.includes(b.id) && b.status !== 'pending'
+        )
+        if (justResolved) setResultBet(justResolved)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [user])
 
   function toggleSelection(
@@ -337,29 +360,53 @@ export default function Apuestas() {
       {resultBet && resultBet.status === 'pending' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
           <div className="w-full max-w-sm rounded-lg bg-paper p-6 text-center">
-            <p className="text-sm text-ink/70">
-              Apuesta registrada. Esto solo existe para que pruebes el flujo completo en este
-              MVP — en producción el resultado lo decide el partido real, no un botón:
-            </p>
-            <div className="mt-4 flex justify-center gap-3">
-              <button
-                onClick={() => demoResolve(true)}
-                className="rounded bg-sage px-3 py-1.5 text-sm text-paper"
-              >
-                Simular que ganó
-              </button>
-              <button
-                onClick={() => demoResolve(false)}
-                className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper"
-              >
-                Simular que perdió
-              </button>
-            </div>
+            {isMockBet(resultBet) ? (
+              <>
+                {/* Datos de ejemplo (sin partido real): se resuelven a mano */}
+                <p className="text-sm text-ink/70">
+                  Apuesta registrada. Estos son datos de ejemplo, así que el resultado lo
+                  eliges tú. Con cuotas reales, lo decide el partido:
+                </p>
+                <div className="mt-4 flex justify-center gap-3">
+                  <button
+                    onClick={() => demoResolve(true)}
+                    className="rounded bg-sage px-3 py-1.5 text-sm text-paper"
+                  >
+                    Simular que ganó
+                  </button>
+                  <button
+                    onClick={() => demoResolve(false)}
+                    className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper"
+                  >
+                    Simular que perdió
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Apuesta real: se resolverá sola cuando termine el partido */}
+                <p className="text-sm text-ink/70">
+                  Apuesta registrada. Se resolverá sola cuando termine el partido: la próxima
+                  vez que abras la app, el resultado real decidirá si ganaste o perdiste.
+                </p>
+                <button
+                  onClick={() => setResultBet(null)}
+                  className="mt-4 rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark"
+                >
+                  Entendido
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
     </div>
   )
+}
+
+/** Una apuesta es "de ejemplo" si todas sus selecciones son datos mock. */
+function isMockBet(bet: Bet): boolean {
+  return bet.selections.every((s) => s.fixtureId.startsWith('mock-'))
 }
 
 /* ----------------------------------------------------------------------- */

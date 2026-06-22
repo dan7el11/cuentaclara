@@ -22,7 +22,8 @@ export interface BetSelection {
   market: string // ej. "1X2", "Doble oportunidad"
   pick: string // ej. "Ecuador gana"
   decimalOdds: number // cuota decimal tal cual la entrega la API
-  outcomeCode: 'home' | 'draw' | 'away' // usado por la Cloud Function para resolver sola
+  outcomeCode: 'home' | 'draw' | 'away' // resultado apostado, para resolver sola
+  sport?: string // competición (clave The Odds API), para consultar el resultado real
 }
 
 export interface Bet {
