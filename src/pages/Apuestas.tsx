@@ -5,6 +5,7 @@ import { placeBet, getBetHistory, resolveBet } from '../services/walletService'
 import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
+import BetHistory from '../components/BetHistory'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 
 /**
@@ -184,8 +185,8 @@ export default function Apuestas() {
           />
         )}
 
-        {/* Cuerpo: lista + boleto */}
-        <div className="flex items-stretch">
+        {/* Cuerpo: lista + boleto (en columna en celular, lado a lado en desktop) */}
+        <div className="flex flex-col md:flex-row md:items-stretch">
           {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
           <section className="min-w-0 flex-1 p-4">
             <p className="mb-3 text-[11px] uppercase tracking-wide text-ink/50">Más partidos</p>
@@ -208,8 +209,8 @@ export default function Apuestas() {
 
           {/* Boleto colapsable / minimizable (C4) */}
           <aside
-            className={`flex-none border-l border-paperline bg-paper/50 transition-all ${
-              slipOpen ? 'w-[300px]' : 'w-14'
+            className={`flex-none border-t border-paperline bg-paper/50 transition-all md:border-l md:border-t-0 ${
+              slipOpen ? 'w-full md:w-[300px]' : 'w-full md:w-14'
             }`}
           >
             {slipOpen ? (
@@ -297,7 +298,7 @@ export default function Apuestas() {
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 py-4">
+              <div className="flex items-center justify-center gap-3 py-3 md:flex-col md:py-4">
                 <button
                   onClick={() => setSlipOpen(true)}
                   title="Abrir boleto"
@@ -310,7 +311,7 @@ export default function Apuestas() {
                     {selections.length}
                   </span>
                 )}
-                <span className="font-serif text-sm text-ink/50 [writing-mode:vertical-rl] [transform:rotate(180deg)]">
+                <span className="font-serif text-sm text-ink/50 md:[writing-mode:vertical-rl] md:[transform:rotate(180deg)]">
                   Boleto
                 </span>
               </div>
@@ -318,6 +319,9 @@ export default function Apuestas() {
           </aside>
         </div>
       </div>
+
+      {/* Historial: la pérdida acumulada, visible apuesta por apuesta */}
+      <BetHistory bets={pastBets} />
 
       {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
       {resultBet && resultBet.status !== 'pending' && (
