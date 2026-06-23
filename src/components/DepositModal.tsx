@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from './ui'
 
 interface Props {
   currentBalance: number
@@ -78,20 +79,12 @@ export default function DepositModal({ currentBalance, onClose, onConfirm }: Pro
         </div>
 
         <div className="flex justify-end gap-3 border-t border-paperline px-6 py-4">
-          <button
-            onClick={onClose}
-            disabled={busy}
-            className="rounded px-4 py-2 text-sm text-ink/70 hover:bg-paperline/50 disabled:opacity-50"
-          >
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
-          </button>
-          <button
-            onClick={confirm}
-            disabled={busy}
-            className="rounded bg-slate px-4 py-2 text-sm font-semibold text-paper hover:bg-slatedark disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={confirm} disabled={busy}>
             {busy ? 'Recargando…' : `Recargar ${money(amount || 0)}`}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

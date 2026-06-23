@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Button, Input } from '../components/ui'
 
 export default function Register() {
   const { register } = useAuth()
@@ -31,59 +32,42 @@ export default function Register() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        <label className="block text-sm text-ink">
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="mt-1 w-full rounded border border-paperline bg-white px-3 py-2"
-          />
-        </label>
-
-        <label className="block text-sm text-ink">
-          Contraseña
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="mt-1 w-full rounded border border-paperline bg-white px-3 py-2"
-          />
-        </label>
-
-        <label className="block text-sm text-ink">
-          Saldo ficticio inicial (simulá lo que pondrías de verdad)
-          <input
+        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input
+          label="Contraseña"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={6}
+        />
+        <Input
+          label="Saldo ficticio inicial (simulá lo que pondrías de verdad)"
+          type="number"
+          mono
+          min={1}
+          value={startingBalance}
+          onChange={(e) => setStartingBalance(Number(e.target.value))}
+        />
+        <div>
+          <Input
+            label="Frenarme cuando la pérdida simulada llegue a"
             type="number"
-            min={1}
-            value={startingBalance}
-            onChange={(e) => setStartingBalance(Number(e.target.value))}
-            className="figure mt-1 w-full rounded border border-paperline bg-white px-3 py-2"
-          />
-        </label>
-
-        <label className="block text-sm text-ink">
-          Frenarme cuando la pérdida simulada llegue a
-          <input
-            type="number"
+            mono
             min={1}
             value={debtThreshold}
             onChange={(e) => setDebtThreshold(Number(e.target.value))}
-            className="figure mt-1 w-full rounded border border-paperline bg-white px-3 py-2"
           />
           <span className="mt-1 block text-xs text-ink/50">
             Este número activa la pantalla que no se puede saltar sin reconocerla.
           </span>
-        </label>
+        </div>
 
         {error && <p className="text-sm text-burgundy">{error}</p>}
 
-        <button className="w-full rounded bg-slate py-2 text-sm text-paper hover:bg-slatedark">
+        <Button type="submit" fullWidth>
           Crear cuenta
-        </button>
+        </Button>
       </form>
     </div>
   )

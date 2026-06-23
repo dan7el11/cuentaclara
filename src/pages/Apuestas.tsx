@@ -12,6 +12,7 @@ import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
 import BetHistory from '../components/BetHistory'
 import MatchDetailModal from '../components/MatchDetailModal'
+import { Button, OddsButton, Badge } from '../components/ui'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 
 /**
@@ -159,8 +160,8 @@ export default function Apuestas() {
             Cuotas representativas del mercado. El dinero, no.
           </p>
         </div>
-        <span className="figure mb-1 hidden rounded-full border border-paperline px-3 py-1 text-[11px] tracking-wide text-ink/55 sm:inline">
-          dinero ficticio
+        <span className="mb-1 hidden sm:inline">
+          <Badge variant="ficticia">dinero ficticio</Badge>
         </span>
       </div>
       <div className="ledger-rule mt-4" />
@@ -330,12 +331,9 @@ export default function Apuestas() {
                     {error && <p className="px-4 text-sm text-burgundy">{error}</p>}
 
                     <div className="px-4 pb-4 pt-2">
-                      <button
-                        onClick={placeBetNow}
-                        className="w-full rounded bg-slate px-4 py-3 text-sm font-semibold text-paper hover:bg-slatedark"
-                      >
+                      <Button onClick={placeBetNow} fullWidth size="lg">
                         Realizar apuesta ficticia
-                      </button>
+                      </Button>
                       <p className="mt-2 text-center text-[11px] text-ink/50">
                         El análisis completo aparece tras el resultado.
                       </p>
@@ -520,18 +518,15 @@ function FeaturedFixture({
               const sel = toBetSelection(fixture, opt)
               const active = selections.some((s) => selectionKey(s) === selectionKey(sel))
               return (
-                <button
+                <OddsButton
                   key={opt.pick}
+                  onDark
+                  label={outcomeSymbol(opt.outcomeCode)}
+                  odds={opt.decimalOdds}
+                  active={active}
                   onClick={() => onPick(sel)}
-                  className={`flex min-w-[80px] flex-col items-center gap-1 rounded-lg border px-3 py-2.5 transition-colors ${
-                    active
-                      ? 'border-paper bg-paper text-ink shadow-sm'
-                      : 'border-paper/20 bg-white/5 text-paper hover:border-paper/40 hover:bg-white/10'
-                  }`}
-                >
-                  <span className="text-[10px] font-semibold opacity-70">{outcomeSymbol(opt.outcomeCode)}</span>
-                  <span className="figure text-lg font-semibold">{opt.decimalOdds.toFixed(2)}</span>
-                </button>
+                  style={{ minWidth: '80px' }}
+                />
               )
             })}
           </div>
