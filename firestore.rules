@@ -36,5 +36,19 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.uid;
     }
+
+    // Perfil/analítica del usuario (racha, días activos). El dueño escribe;
+    // el análisis agregado se hace desde el servidor (admin), no desde el
+    // cliente, así que no hace falta lectura cruzada.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Actividad diaria (DAU): el dueño crea su propio registro del día. La
+    // lectura/conteo agregado se hace desde el servidor (admin).
+    match /dailyActive/{id} {
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.uid;
+    }
   }
 }

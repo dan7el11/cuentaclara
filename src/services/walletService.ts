@@ -81,6 +81,10 @@ export async function placeBet(
     potentialPayout: Math.round(stake * odds * 100) / 100,
     status: 'pending',
     placedAt: Date.now(),
+    // Desnormalizado para análisis posterior (cuántos apostaron a un partido
+    // o a un mercado, y su % de pérdida) sin tener que recorrer selecciones.
+    fixtureIds: [...new Set(selections.map((s) => s.fixtureId))],
+    markets: [...new Set(selections.map((s) => s.market))],
   }
 
   const betDoc = await addDoc(collection(db, 'bets'), bet)

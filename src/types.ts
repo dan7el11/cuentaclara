@@ -37,6 +37,11 @@ export interface Bet {
   status: BetStatus
   placedAt: number
   resolvedAt?: number
+  // Campos desnormalizados para análisis (Firestore array-contains):
+  // permiten contar apuestas por partido y por mercado sin recorrer la
+  // matriz de selecciones.
+  fixtureIds?: string[] // ids de los partidos involucrados
+  markets?: string[] // mercados involucrados (ej. "1X2", "Over/Under 2.5")
 }
 
 export interface Transaction {
