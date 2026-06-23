@@ -15,6 +15,7 @@ import {
 import { db } from '../firebase'
 import type { Bet, BetSelection, Transaction, Wallet } from '../types'
 import { combinedOdds, impliedProbability } from '../utils/financialMath'
+import { settleBet, type FixtureScore } from '../utils/settlement'
 import { fetchScores } from './oddsApi'
 
 export function subscribeToWallet(
@@ -84,7 +85,7 @@ export async function placeBet(
     // Desnormalizado para análisis posterior (cuántos apostaron a un partido
     // o a un mercado, y su % de pérdida) sin tener que recorrer selecciones.
     fixtureIds: [...new Set(selections.map((s) => s.fixtureId))],
-    markets: [...new Set(selections.map((s) => s.market))],
+    markets: [...new Set(selections.map((s) => s.marketKey))],
   }
 
   const betDoc = await addDoc(collection(db, 'bets'), bet)
@@ -107,11 +108,12 @@ export async function placeBet(
 }
 
 /**
- * Resuelve una apuesta pendiente. Es IDEMPOTENTE: dentro de una transacción
- * comprueba que la apuesta siga `pending` antes de tocar el saldo, así nunca
- * se paga dos veces aunque el cron del servidor la resuelva al mismo tiempo.
+ * Resuelve una apuesta pendiente con resultado ganada / perdida / anulada.
+ * "void" devuelve lo apostado (empate contra la línea). Es IDEMPOTENTE: dentro
+ * de una transacción comprueba que la apuesta siga `pending` antes de tocar el
+ * saldo, así nunca se paga dos veces aunque el cron también la resuelva.
  */
-export async function resolveBet(betId: string, won: boolean): Promise<void> {
+export async function resolveBet(betId: string, result: 'won' | 'lost' | 'void'): Promise<void> {
   const betRef = doc(db, 'bets', betId)
 
   const applied = await runTransaction(db, async (tx) => {
@@ -121,14 +123,15 @@ export async function resolveBet(betId: string, won: boolean): Promise<void> {
     if (bet.status !== 'pending') return null // ya resuelta (p. ej. por el cron)
 
     const walletRef = doc(db, 'wallets', bet.uid)
-    const payout = won ? bet.potentialPayout : 0
-    const netResult = payout - bet.stake
+    // won: cobra el pago potencial · void: recupera lo apostado · lost: nada.
+    const payout = result === 'won' ? bet.potentialPayout : result === 'void' ? bet.stake : 0
+    const netResult = bet.potentialPayout - bet.stake
 
-    tx.update(betRef, { status: won ? 'won' : 'lost', resolvedAt: Date.now() })
+    tx.update(betRef, { status: result, resolvedAt: Date.now() })
     tx.update(walletRef, {
       balance: increment(payout),
-      totalWon: increment(won ? netResult : 0),
-      totalLost: increment(won ? 0 : bet.stake),
+      totalWon: increment(result === 'won' ? netResult : 0),
+      totalLost: increment(result === 'lost' ? bet.stake : 0),
     })
     return { uid: bet.uid, payout }
   })
@@ -140,8 +143,8 @@ export async function resolveBet(betId: string, won: boolean): Promise<void> {
 
   await addDoc(collection(db, 'transactions'), {
     uid: applied.uid,
-    type: won ? 'bet_won' : 'bet_lost',
-    amount: won ? applied.payout : 0,
+    type: result === 'won' ? 'bet_won' : result === 'void' ? 'bet_void' : 'bet_lost',
+    amount: applied.payout,
     balanceAfter,
     betId,
     createdAt: Date.now(),
@@ -169,11 +172,11 @@ export async function resolvePendingBets(uid: string): Promise<string[]> {
   ]
   if (sports.length === 0) return []
 
-  const outcomeByFixture = new Map<string, BetSelection['outcomeCode']>()
+  const scoresByFixture = new Map<string, FixtureScore>()
   for (const sport of sports) {
     try {
       const results = await fetchScores(sport)
-      for (const r of results) outcomeByFixture.set(r.fixtureId, r.outcome)
+      for (const r of results) scoresByFixture.set(r.fixtureId, r)
     } catch {
       // Si una competición falla, seguimos con las demás; sus apuestas
       // simplemente quedan pendientes hasta la próxima pasada.
@@ -182,10 +185,9 @@ export async function resolvePendingBets(uid: string): Promise<string[]> {
 
   const resolvedIds: string[] = []
   for (const bet of pending) {
-    const outcomes = bet.selections.map((s) => outcomeByFixture.get(s.fixtureId))
-    if (outcomes.some((o) => o === undefined)) continue // falta algún resultado
-    const won = bet.selections.every((s, i) => outcomes[i] === s.outcomeCode)
-    await resolveBet(bet.id, won)
+    const result = settleBet(bet.selections, scoresByFixture)
+    if (!result) continue // falta algún resultado
+    await resolveBet(bet.id, result)
     resolvedIds.push(bet.id)
   }
   return resolvedIds

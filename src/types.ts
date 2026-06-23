@@ -19,11 +19,13 @@ export type BetStatus = 'pending' | 'won' | 'lost' | 'void'
 export interface BetSelection {
   fixtureId: string
   fixtureLabel: string // ej. "Ecuador vs. Senegal"
-  market: string // ej. "1X2", "Doble oportunidad"
-  pick: string // ej. "Ecuador gana"
-  decimalOdds: number // cuota decimal tal cual la entrega la API
-  outcomeCode: 'home' | 'draw' | 'away' // resultado apostado, para resolver sola
   sport?: string // competición (clave The Odds API), para consultar el resultado real
+  marketKey: string // 'h2h' | 'totals' | 'btts' | 'double_chance' | 'spreads'
+  marketLabel: string // ej. "Resultado (1X2)", "Más / Menos goles"
+  selectionCode: string // home|draw|away|over|under|yes|no|1X|12|X2
+  selectionLabel: string // ej. "Más de 2.5 goles" (lo que ve el usuario)
+  point?: number // línea, para totals/spreads
+  decimalOdds: number // cuota decimal tal cual la entrega la API
 }
 
 export interface Bet {
@@ -47,7 +49,7 @@ export interface Bet {
 export interface Transaction {
   id: string
   uid: string
-  type: 'bet_placed' | 'bet_won' | 'bet_lost' | 'deposit_sim'
+  type: 'bet_placed' | 'bet_won' | 'bet_lost' | 'bet_void' | 'deposit_sim'
   amount: number // positivo o negativo según el tipo
   balanceAfter: number
   betId?: string
