@@ -1,4 +1,5 @@
 import { probabilityOfRepeatingStreak } from '../utils/financialMath'
+import { Button } from './ui'
 import type { Bet } from '../types'
 
 interface Props {
@@ -48,12 +49,7 @@ export default function ResultModal({ bet, totalLostSoFar, onClose }: Props) {
         )}
 
         <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark"
-          >
-            Entendido
-          </button>
+          <Button onClick={onClose}>Entendido</Button>
         </div>
       </div>
     </div>

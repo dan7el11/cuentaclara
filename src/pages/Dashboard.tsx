@@ -13,6 +13,7 @@ import { estimateOpportunityCost } from '../utils/financialMath'
 import type { Transaction, VirtualCardData, Wallet } from '../types'
 import VirtualCard from '../components/VirtualCard'
 import DepositModal from '../components/DepositModal'
+import { Button } from '../components/ui'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -108,13 +109,11 @@ export default function Dashboard() {
               Todavía no tenés una billetera ficticia. Creá una para empezar a simular con saldo
               ficticio (sin valor real).
             </p>
-            <button
-              onClick={handleCreateWallet}
-              disabled={creating}
-              className="mt-4 rounded bg-slate px-4 py-2 text-sm font-semibold text-paper hover:bg-slatedark disabled:opacity-50"
-            >
-              {creating ? 'Creando…' : 'Crear cuenta con $100 ficticios'}
-            </button>
+            <div className="mt-4">
+              <Button onClick={handleCreateWallet} disabled={creating}>
+                {creating ? 'Creando…' : 'Crear cuenta con $100 ficticios'}
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -151,12 +150,9 @@ export default function Dashboard() {
                   <p className="text-[11px] uppercase tracking-[0.14em] text-paper/55">Saldo ficticio</p>
                   <p className="figure mt-1 text-4xl font-semibold">{money(wallet.balance)}</p>
                 </div>
-                <button
-                  onClick={() => setDepositOpen(true)}
-                  className="rounded-md border border-paper/30 bg-white/10 px-3 py-1.5 text-sm font-medium text-paper transition-colors hover:bg-white/20"
-                >
+                <Button variant="dark" size="sm" onClick={() => setDepositOpen(true)}>
                   + Recargar
-                </button>
+                </Button>
               </div>
               <div className="mt-4 flex gap-6 text-sm">
                 <MiniStat label="Apostado" value={money(wallet.totalStaked)} />
@@ -246,13 +242,11 @@ export default function Dashboard() {
               pantalla de inicio).
             </p>
           ) : (
-            <button
-              onClick={handleEnablePush}
-              disabled={pushState === 'working'}
-              className="mt-3 rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark disabled:opacity-50"
-            >
-              {pushState === 'working' ? 'Activando…' : 'Activar notificaciones'}
-            </button>
+            <div className="mt-3">
+              <Button onClick={handleEnablePush} disabled={pushState === 'working'}>
+                {pushState === 'working' ? 'Activando…' : 'Activar notificaciones'}
+              </Button>
+            </div>
           )}
         </div>
       </div>

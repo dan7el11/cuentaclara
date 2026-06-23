@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Button, Input } from '../components/ui'
 
 export default function Login() {
   const { login } = useAuth()
@@ -28,12 +29,18 @@ export default function Login() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        <Field label="Email" type="email" value={email} onChange={setEmail} />
-        <Field label="Contraseña" type="password" value={password} onChange={setPassword} />
+        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input
+          label="Contraseña"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
         {error && <p className="text-sm text-burgundy">{error}</p>}
-        <button className="w-full rounded bg-slate py-2 text-sm text-paper hover:bg-slatedark">
+        <Button type="submit" fullWidth>
           Entrar
-        </button>
+        </Button>
       </form>
 
       <p className="mt-4 text-center text-sm text-ink/60">
@@ -43,30 +50,5 @@ export default function Login() {
         </Link>
       </p>
     </div>
-  )
-}
-
-function Field({
-  label,
-  type,
-  value,
-  onChange,
-}: {
-  label: string
-  type: string
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <label className="block text-sm text-ink">
-      {label}
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required
-        className="mt-1 w-full rounded border border-paperline bg-white px-3 py-2"
-      />
-    </label>
   )
 }

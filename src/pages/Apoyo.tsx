@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Button } from '../components/ui'
 
 // Brief Biosocial Gambling Screen (BBGS): tres preguntas validadas como
 // cribado rápido. Cualquier "sí" sugiere conveniente una evaluación.
@@ -61,13 +62,11 @@ export default function Apoyo() {
           ))}
         </div>
 
-        <button
-          onClick={() => setSubmitted(true)}
-          disabled={!answered}
-          className="mt-4 rounded bg-slate px-4 py-2 text-sm font-semibold text-paper hover:bg-slatedark disabled:opacity-40"
-        >
-          Ver resultado
-        </button>
+        <div className="mt-4">
+          <Button onClick={() => setSubmitted(true)} disabled={!answered}>
+            Ver resultado
+          </Button>
+        </div>
 
         {submitted && answered && (
           <div
