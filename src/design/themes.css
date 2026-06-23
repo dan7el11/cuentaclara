@@ -1,8 +1,21 @@
 /* Temas de muestra para /muestra — sobrescriben los tokens dentro de un
    contenedor. Sirven para comparar estilos sin cambiar la app real. */
 
-/* 0 — Claro original (la app era así antes del tema oscuro global) */
+/* 0 — Claro original (la app era así antes del tema oscuro global).
+   Aplicado en <html class="theme-light"> actúa como tema global claro:
+   también define los canales --c-* que consume Tailwind. */
 .theme-light {
+  --c-ink: 28 36 48;
+  --c-paper: 243 239 230;
+  --c-paperline: 227 220 201;
+  --c-surface: 255 255 255;
+  --c-slate: 61 90 115;
+  --c-slatedark: 44 67 86;
+  --c-ochre: 185 139 62;
+  --c-burgundy: 122 46 46;
+  --c-sage: 91 107 79;
+  --c-white: 255 255 255;
+
   --color-ink: #1c2430;
   --color-paper: #f3efe6;
   --color-paperline: #e3dcc9;
