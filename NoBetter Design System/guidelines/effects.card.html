@@ -1,0 +1,55 @@
+<!-- @dsCard group="Spacing" viewport="700x200" name="Radius & Shadows" subtitle="Corner radius scale + card drop shadow" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin:0; padding:20px 24px; background:var(--color-bg); display:flex; gap:32px; align-items:flex-start; }
+  .section { flex:1; }
+  .label { font-family:var(--font-mono); font-size:10px; color:var(--color-text-subtle); margin-bottom:10px; }
+  .radii { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+  .rbox { background:var(--color-primary); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:6px; }
+  .rtxt { font-family:var(--font-mono); font-size:9px; color:var(--color-paper); margin-top:4px; }
+  .card-demo { background:#fff; border:1px solid var(--color-border); border-radius:var(--radius-xl); box-shadow:var(--shadow-card); padding:20px; font-family:var(--font-sans); font-size:12px; color:var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <div class="section">
+    <div class="label">CORNER RADIUS</div>
+    <div class="radii">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div class="rbox" style="width:28px;height:28px;border-radius:4px"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--color-text-subtle)">sm 4px</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div class="rbox" style="width:32px;height:32px;border-radius:6px"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--color-text-subtle)">md 6px</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div class="rbox" style="width:36px;height:36px;border-radius:8px"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--color-text-subtle)">lg 8px</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div class="rbox" style="width:44px;height:44px;border-radius:12px"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--color-text-subtle)">xl 12px</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div class="rbox" style="width:44px;height:44px;border-radius:16px"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--color-text-subtle)">2xl 16px</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div class="rbox" style="width:44px;height:22px;border-radius:999px"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--color-text-subtle)">pill</span>
+      </div>
+    </div>
+  </div>
+  <div class="section" style="max-width:240px">
+    <div class="label">CARD SHADOW (--shadow-card)</div>
+    <div class="card-demo">
+      <div style="font-family:var(--font-serif);font-size:15px;color:var(--color-text);margin-bottom:4px">Extracto resumido</div>
+      <div>0 18px 50px −26px ink/45%</div>
+    </div>
+  </div>
+</body>
+</html>

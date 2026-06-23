@@ -1,0 +1,33 @@
+<!-- @dsCard group="Colors" viewport="700x220" name="Semantic Colors" subtitle="Named roles — text, surface, primary, states" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin:0; padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#fff; font-family:var(--font-sans); }
+  .row { display:flex; align-items:center; gap:10px; padding:6px 0; }
+  .dot { width:20px; height:20px; border-radius:4px; flex-shrink:0; border:1px solid rgba(0,0,0,0.06); }
+  .name { font-size:11px; font-weight:600; color:var(--color-text); font-family:var(--font-mono); }
+  .desc { font-size:10px; color:var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <div>
+    <div class="row"><div class="dot" style="background:var(--color-text)"></div><div><div class="name">--color-text</div><div class="desc">Primary text</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-text-muted)"></div><div><div class="name">--color-text-muted</div><div class="desc">Secondary / labels</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-text-subtle)"></div><div><div class="name">--color-text-subtle</div><div class="desc">Captions / metadata</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-bg);border:1px solid #ccc"></div><div><div class="name">--color-bg</div><div class="desc">Page background (paper)</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-surface);border:1px solid #ccc"></div><div><div class="name">--color-surface</div><div class="desc">Card / panel background</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-border)"></div><div><div class="name">--color-border</div><div class="desc">Dividers &amp; outlines</div></div></div>
+  </div>
+  <div>
+    <div class="row"><div class="dot" style="background:var(--color-primary)"></div><div><div class="name">--color-primary</div><div class="desc">Action / selection</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-primary-bg)"></div><div><div class="name">--color-primary-bg</div><div class="desc">Active chip tint</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-warning)"></div><div><div class="name">--color-warning</div><div class="desc">Alerts / house margin</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-danger)"></div><div><div class="name">--color-danger</div><div class="desc">Debt alerts — use sparingly</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--color-success)"></div><div><div class="name">--color-success</div><div class="desc">Gains / positive results</div></div></div>
+    <div class="row"><div class="dot" style="background:var(--gradient-slate)"></div><div><div class="name">--gradient-slate</div><div class="desc">Hero &amp; featured headers</div></div></div>
+  </div>
+</body>
+</html>

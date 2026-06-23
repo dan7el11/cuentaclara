@@ -1,0 +1,59 @@
+/* NoBetter — Sportsbook (dark) theme
+   The "real bookmaker" skin. Dark, energetic, violet accent.
+   Scoped to .sb-theme so it never collides with the sober :root palette.
+   Wrap any sportsbook surface in <div class="sb-theme">.
+
+   Design intent: look indistinguishable from a real sportsbook
+   (bet365 density, Stake darkness, violet accent) — but with the
+   uncomfortable truths (house margin, fictional money, expected loss)
+   woven into the same convincing UI.
+*/
+.sb-theme {
+  /* ── Surfaces (near-black indigo) ─────────────────────── */
+  --sb-bg:          #0C0D17;   /* page base                  */
+  --sb-bg-2:        #11121F;   /* secondary base / sidebars  */
+  --sb-surface:     #181A2B;   /* cards, panels              */
+  --sb-surface-2:   #20223A;   /* rows, hover                */
+  --sb-surface-3:   #282B47;   /* odds tiles, inputs         */
+  --sb-border:      #2C2F4D;   /* hairlines                  */
+  --sb-border-soft: #232540;
+
+  /* ── Text ─────────────────────────────────────────────── */
+  --sb-text:    #F3F4FB;
+  --sb-text-2:  #B4B6CF;
+  --sb-text-3:  #7B7E9C;
+
+  /* ── Accent — violet (primary "apostar") ──────────────── */
+  --sb-accent:        #7B5CFF;
+  --sb-accent-hover:  #8E73FF;
+  --sb-accent-press:  #6A4AF0;
+  --sb-accent-soft:   rgba(123, 92, 255, 0.16);
+  --sb-on-accent:     #FFFFFF;
+
+  /* ── Market movement & outcomes ───────────────────────── */
+  --sb-up:    #22C55E;   /* odds drifted up / win green */
+  --sb-down:  #F0455A;   /* odds shortened              */
+  --sb-live:  #FF3B5C;   /* live red                    */
+  --sb-cash:  #1FD17A;   /* cash out / winnings         */
+
+  /* ── The uncomfortable truth ──────────────────────────── */
+  --sb-truth:     #F5A524;   /* amber — house margin, warnings  */
+  --sb-truth-bg:  rgba(245, 165, 36, 0.12);
+  --sb-loss:      #F0455A;   /* cumulative loss                 */
+
+  /* ── Gradients ────────────────────────────────────────── */
+  --sb-grad-accent: linear-gradient(135deg, #7B5CFF 0%, #5B8CFF 100%); /* @kind color */
+  --sb-grad-hero:   linear-gradient(160deg, #221B4D 0%, #141228 55%, #0C0D17 100%); /* @kind color */
+  --sb-grad-live:   linear-gradient(160deg, #3A1530 0%, #1A1024 55%, #0C0D17 100%); /* @kind color */
+
+  /* ── Radius & shadow ──────────────────────────────────── */
+  --sb-radius:        10px;
+  --sb-radius-sm:     6px;
+  --sb-shadow:        0 8px 24px rgba(0, 0, 0, 0.45);
+  --sb-shadow-accent: 0 6px 20px rgba(123, 92, 255, 0.40);
+}
+
+@keyframes sbpulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}

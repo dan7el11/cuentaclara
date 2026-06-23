@@ -1,0 +1,32 @@
+<!-- @dsCard group="Colors" viewport="700x110" name="State Colors" subtitle="Warning · Danger · Success — tinted bg + border patterns" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin:0; padding:16px; display:flex; gap:12px; background:#fff; }
+  .chip { flex:1; border-radius:8px; padding:12px 14px; border:1px solid; }
+  .title { font-family:var(--font-sans); font-size:11px; font-weight:600; margin-bottom:2px; }
+  .desc { font-family:var(--font-sans); font-size:11px; line-height:1.4; }
+  .tokens { font-family:var(--font-mono); font-size:10px; margin-top:8px; opacity:0.7; }
+</style>
+</head>
+<body>
+  <div class="chip" style="background:var(--color-warning-bg);border-color:var(--color-warning-border)">
+    <div class="title" style="color:var(--color-warning)">⚠ Ochre · Warning</div>
+    <div class="desc" style="color:var(--color-text-muted)">House margin, alerts, "Modo simulador" dot</div>
+    <div class="tokens" style="color:var(--color-warning)">--color-warning-bg/border</div>
+  </div>
+  <div class="chip" style="background:var(--color-danger-bg);border-color:var(--color-danger-border)">
+    <div class="title" style="color:var(--color-danger)">✕ Burgundy · Danger</div>
+    <div class="desc" style="color:var(--color-text-muted)">Debt threshold, losses, serious alerts only</div>
+    <div class="tokens" style="color:var(--color-danger)">--color-danger-bg/border</div>
+  </div>
+  <div class="chip" style="background:var(--color-success-bg);border-color:var(--color-success-border)">
+    <div class="title" style="color:var(--color-success)">↗ Sage · Success</div>
+    <div class="desc" style="color:var(--color-text-muted)">Gains, wins, opportunity cost (positive)</div>
+    <div class="tokens" style="color:var(--color-success)">--color-success-bg/border</div>
+  </div>
+</body>
+</html>

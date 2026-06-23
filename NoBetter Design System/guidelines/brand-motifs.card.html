@@ -1,0 +1,38 @@
+<!-- @dsCard group="Brand" viewport="700x220" name="Brand Motifs" subtitle="Ledger rule, slate gradient, ink bar" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin:0; padding:20px 24px; background:var(--color-bg); display:flex; flex-direction:column; gap:20px; }
+  .label { font-family:var(--font-mono); font-size:10px; color:var(--color-text-subtle); margin-bottom:6px; }
+  .gradient-demo { border-radius:var(--radius-xl); padding:20px 24px; color:#fff; position:relative; overflow:hidden; }
+  .gradient-demo::before { content:''; position:absolute; inset:0; opacity:0.06; background:repeating-linear-gradient(115deg,#fff 0 1px,transparent 1px 22px); pointer-events:none; }
+  .gradient-demo::after { content:''; position:absolute; inset-inline:0; top:0; height:1px; background:rgba(185,139,62,0.5); }
+</style>
+</head>
+<body>
+  <div>
+    <div class="label">LEDGER RULE — .ledger-rule / &lt;LedgerRule&gt;</div>
+    <div class="ledger-rule"></div>
+    <div style="margin-top:8px;font-family:var(--font-sans);font-size:12px;color:var(--color-text-muted)">Dashed 6px/6px gap · color-paperline · height 1px · used as section separator</div>
+  </div>
+  <div>
+    <div class="label">SLATE GRADIENT — --gradient-slate · hero headers &amp; featured match</div>
+    <div class="gradient-demo" style="background:var(--gradient-slate)">
+      <div style="font-family:var(--font-sans);font-size:11px;letter-spacing:0.14em;opacity:0.55;text-transform:uppercase">Saldo ficticio</div>
+      <div style="font-family:var(--font-mono);font-size:28px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums">$100.00</div>
+      <div style="font-family:var(--font-sans);font-size:11px;opacity:0.55;margin-top:4px">linear-gradient(118deg, #2C4356 → #34506A → #3D5A73)</div>
+    </div>
+  </div>
+  <div>
+    <div class="label">INK BAR — bg-ink text-paper · LedgerBar (persistent top strip)</div>
+    <div style="background:var(--color-ink);color:var(--color-paper);padding:8px 16px;border-radius:6px;font-family:var(--font-sans);font-size:11px;display:flex;gap:24px;align-items:center">
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6">Saldo ficticio</div><div style="font-family:var(--font-mono);font-size:14px;font-variant-numeric:tabular-nums">$76.00</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6">Resultado neto</div><div style="font-family:var(--font-mono);font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-ochre)">−$24.00</div></div>
+      <span style="margin-left:auto;border:1px solid rgba(227,220,201,0.4);border-radius:999px;padding:3px 10px;font-size:10px;opacity:0.7;display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-ochre);display:inline-block"></span>Modo simulador</span>
+    </div>
+  </div>
+</body>
+</html>

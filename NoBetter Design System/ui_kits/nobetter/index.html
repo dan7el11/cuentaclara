@@ -1,0 +1,520 @@
+<!-- @startingPoint section="NoBetter" subtitle="Flagship — pro sportsbook look, anti-gambling mission, reality-check on bet" viewport="1320x900" -->
+<!-- @dsCard group="NoBetter" viewport="1320x900" name="NoBetter Flagship" subtitle="Pro sportsbook shell · Apuestas / Aprendé / Apoyo · reality-check modal unmasks the bet" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoBetter — el simulador que no querés que funcione</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  html, body { margin:0; padding:0; background:#0C0D17; }
+  * { box-sizing:border-box; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#2C2F4D; border-radius:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  input[type=number]{ -moz-appearance:textfield; }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type=range]{ -webkit-appearance:none; appearance:none; height:4px; border-radius:999px; background:var(--sb-surface-3); outline:none; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--sb-accent); cursor:pointer; border:2px solid var(--sb-bg); }
+  input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:var(--sb-accent); cursor:pointer; border:2px solid var(--sb-bg); }
+  @keyframes sbfade { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+  @keyframes sbscrim { from{opacity:0;} to{opacity:1;} }
+</style>
+</head>
+<body class="sb-theme">
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState } = React;
+
+/* ─────────── primitives ─────────── */
+function SbBadge({ children, variant = 'default', dot = false, live = false }) {
+  const base = { display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '6px', lineHeight: 1.3, whiteSpace: 'nowrap' };
+  const v = { default: { background: 'var(--sb-surface-3)', color: 'var(--sb-text-2)' }, accent: { background: 'var(--sb-accent-soft)', color: 'var(--sb-accent)' }, live: { background: 'var(--sb-live)', color: '#fff' }, truth: { background: 'var(--sb-truth-bg)', color: 'var(--sb-truth)' }, cash: { background: 'rgba(31,209,122,0.14)', color: 'var(--sb-cash)' }, ficticia: { background: 'var(--sb-truth-bg)', color: 'var(--sb-truth)' } }[variant];
+  const d = dot || live ? <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: live ? 'sbpulse 1.4s ease-in-out infinite' : 'none' }} /> : null;
+  return <span style={{ ...base, ...v }}>{d}{children}</span>;
+}
+function SbOddsTile({ label, odds, active = false, move, onClick }) {
+  const base = { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', minWidth: '60px', padding: '8px 10px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', transition: 'all .12s ease', fontFamily: 'var(--font-sans)' };
+  const st = active ? { background: 'var(--sb-accent)', borderColor: 'var(--sb-accent)', color: 'var(--sb-on-accent)', boxShadow: 'var(--sb-shadow-accent)' } : { background: 'var(--sb-surface-3)', borderColor: 'var(--sb-border)', color: 'var(--sb-text)' };
+  const mc = move === 'up' ? 'var(--sb-up)' : move === 'down' ? 'var(--sb-down)' : 'transparent';
+  return <button onClick={onClick} style={{ ...base, ...st }}>
+    {label && <span style={{ fontSize: '10px', fontWeight: 600, opacity: active ? 0.85 : 0.5, letterSpacing: '.04em', textTransform: 'uppercase' }}>{label}</span>}
+    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{odds.toFixed(2)}</span>
+      {move && <span style={{ fontSize: '8px', color: active ? 'var(--sb-on-accent)' : mc }}>{move === 'up' ? '\u25B2' : '\u25BC'}</span>}
+    </span>
+  </button>;
+}
+function SbButton({ children, variant = 'primary', size = 'md', fullWidth = false, glow = false, onClick }) {
+  const base = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'var(--font-sans)', fontWeight: 700, border: '1px solid transparent', cursor: 'pointer', transition: 'all .14s ease', whiteSpace: 'nowrap', ...(fullWidth ? { width: '100%' } : {}) };
+  const sz = { sm: { fontSize: '12px', padding: '7px 14px', borderRadius: '8px' }, md: { fontSize: '14px', padding: '11px 18px', borderRadius: '9px' }, lg: { fontSize: '15px', padding: '14px 22px', borderRadius: '10px' } }[size];
+  const v = { primary: { background: 'var(--sb-accent)', color: 'var(--sb-on-accent)', borderColor: 'var(--sb-accent)', boxShadow: glow ? 'var(--sb-shadow-accent)' : 'none' }, secondary: { background: 'var(--sb-surface-3)', color: 'var(--sb-text)', borderColor: 'var(--sb-border)' }, ghost: { background: 'transparent', color: 'var(--sb-text-2)', borderColor: 'transparent' }, success: { background: 'var(--sb-cash)', color: '#06210F', borderColor: 'var(--sb-cash)' }, outline: { background: 'transparent', color: 'var(--sb-accent)', borderColor: 'var(--sb-accent)' } }[variant];
+  return <button onClick={onClick} style={{ ...base, ...sz, ...v }}>{children}</button>;
+}
+
+/* ─────────── flags (real flagcdn SVGs — see assets/flags.js) ─────────── */
+const FLAGS = { Argentina: 'ar', Brazil: 'br', Spain: 'es', France: 'fr', Netherlands: 'nl', Germany: 'de', England: 'gb-eng', Portugal: 'pt', Mexico: 'mx', 'United States': 'us', Uruguay: 'uy', Colombia: 'co' };
+const TEAM_ES = { Brazil: 'Brasil', Spain: 'España', France: 'Francia', Netherlands: 'Países Bajos', Germany: 'Alemania', England: 'Inglaterra', 'United States': 'Estados Unidos', Mexico: 'México' };
+const displayTeam = (t) => TEAM_ES[t] || t;
+const flagUrl = (t) => FLAGS[t] ? `https://flagcdn.com/${FLAGS[t]}.svg` : null;
+const initials = (t) => t.replace(/[^A-Za-zÀ-ÿ ]/g, '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+function Flag({ team, size = 24 }) {
+  const url = flagUrl(team);
+  if (!url) return <span style={{ width: size, height: Math.round(size * 0.72), borderRadius: '3px', background: 'var(--sb-surface-3)', border: '1px solid var(--sb-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--sb-text-3)', flexShrink: 0 }}>{initials(team)}</span>;
+  return <img src={url} alt="" width={size} height={Math.round(size * 0.72)} style={{ borderRadius: '3px', objectFit: 'cover', display: 'block', boxShadow: '0 0 0 1px var(--sb-border)', flexShrink: 0 }} />;
+}
+
+/* ─────────── data ─────────── */
+const ACCENTS = {
+  violet: { a: '#7B5CFF', h: '#8E73FF', p: '#6A4AF0', soft: 'rgba(123,92,255,.16)', glow: '0 6px 20px rgba(123,92,255,.4)', on: '#FFFFFF', name: 'Violeta' },
+  green: { a: '#00E701', h: '#37F03A', p: '#00C400', soft: 'rgba(0,231,1,.14)', glow: '0 6px 20px rgba(0,231,1,.32)', on: '#06210F', name: 'Verde' },
+  amber: { a: '#F5A524', h: '#FFB740', p: '#E0930F', soft: 'rgba(245,165,36,.16)', glow: '0 6px 20px rgba(245,165,36,.4)', on: '#241702', name: 'Ámbar' }
+};
+const SPORTS = [
+{ id: 'live', name: 'En vivo', count: 24, live: true }, { id: 'futbol', name: 'Fútbol', count: 312 },
+{ id: 'tenis', name: 'Tenis', count: 88 }, { id: 'basquet', name: 'Básquet', count: 54 },
+{ id: 'nba', name: 'NBA', count: 12 }, { id: 'box', name: 'Boxeo', count: 6 }, { id: 'esports', name: 'eSports', count: 31 }];
+
+const LIVE = { id: 'live1', league: 'Mundial 2026', home: 'Argentina', away: 'Brazil', sh: 1, sa: 1, minute: "67'", odds: [2.35, 3.10, 2.95], moves: ['up', null, 'down'], margin: 6.8 };
+const MATCHES = [
+{ id: 'm1', time: '16:00', tag: 'Hoy', league: 'Eliminatorias', home: 'Spain', away: 'France', odds: [2.10, 3.30, 3.40], moves: [null, null, 'up'], markets: 142, margin: 6.9 },
+{ id: 'm2', time: '18:30', tag: 'Hoy', league: 'Eliminatorias', home: 'Netherlands', away: 'Germany', odds: [2.55, 3.25, 2.70], moves: ['down', null, null], markets: 128, margin: 7.1 },
+{ id: 'm3', time: '21:00', tag: 'Hoy', league: 'Amistoso', home: 'England', away: 'Portugal', odds: [2.20, 3.10, 3.30], moves: [null, 'up', null], markets: 119, margin: 6.7 },
+{ id: 'm4', time: '13:00', tag: 'Mañana', league: 'Mundial 2026', home: 'Mexico', away: 'United States', odds: [2.40, 3.15, 2.95], moves: ['up', null, 'down'], markets: 156, margin: 7.4 }];
+
+const money = (n) => '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const PICK_LABELS = { 0: 'Gana local', 1: 'Empate', 2: 'Gana visitante' };
+
+/* ─────────── app ─────────── */
+function App() {
+  const [accentKey, setAccentKey] = useState('violet');
+  const [screen, setScreen] = useState('apuestas');
+  const [sport, setSport] = useState('live');
+  const [slip, setSlip] = useState([]);
+  const [stake, setStake] = useState(10);
+  const [result, setResult] = useState(null);
+  const [slipCollapsed, setSlipCollapsed] = useState(true);
+
+  // running session ledger — the thing a real book never shows you
+  const [session, setSession] = useState({ bets: 0, wagered: 0, net: 0 });
+
+  const acc = ACCENTS[accentKey];
+
+  function pick(match, sel) {
+    const key = match.id + '-' + sel;
+    setSlipCollapsed(false);
+    setSlip((prev) => {
+      const ex = prev.find((s) => s.matchId === match.id);
+      if (ex && ex.key === key) return prev.filter((s) => s.key !== key);
+      const cleaned = prev.filter((s) => s.matchId !== match.id);
+      return [...cleaned, { key, matchId: match.id, teams: `${displayTeam(match.home)} vs ${displayTeam(match.away)}`, sel, odds: match.odds[sel], margin: match.margin }];
+    });
+  }
+  const isActive = (id, sel) => slip.some((s) => s.key === id + '-' + sel);
+
+  const combined = slip.reduce((a, s) => a * s.odds, 1);
+  const payout = stake * combined;
+  const impliedProb = combined > 0 ? 100 / combined : 0;
+  const avgMargin = slip.length ? slip.reduce((a, s) => a + s.margin, 0) / slip.length : 0;
+  const expectedLoss = stake * (avgMargin / 100);
+
+  function placeBet() {
+    // outcome weighted by TRUE probability (implied minus the house edge)
+    const trueWinProb = (impliedProb - avgMargin) / 100;
+    const won = Math.random() < trueWinProb;
+    const delta = won ? payout - stake : -stake;
+    setSession((s) => ({ bets: s.bets + 1, wagered: s.wagered + stake, net: s.net + delta }));
+    setResult({ won, delta, stake, payout, combined });
+    setSlip([]);
+  }
+
+  const wrapStyle = {
+    '--sb-accent': acc.a, '--sb-accent-hover': acc.h, '--sb-accent-press': acc.p,
+    '--sb-accent-soft': acc.soft, '--sb-shadow-accent': acc.glow, '--sb-on-accent': acc.on,
+    minHeight: '100vh', background: 'var(--sb-bg)', color: 'var(--sb-text)', fontFamily: 'var(--font-sans)'
+  };
+
+  const lostInvested = Math.abs(Math.min(session.net, 0)) * Math.pow(1.08, 5);
+
+  return (
+    <div style={wrapStyle}>
+
+      {/* ===== top nav ===== */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(12,13,23,0.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--sb-border)' }}>
+        <div style={{ maxWidth: '1320px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '20px', padding: '12px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '19px', letterSpacing: '-0.02em', cursor: 'pointer' }} onClick={() => setScreen('apuestas')}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--sb-accent)', boxShadow: 'var(--sb-shadow-accent)' }} />
+            No<span style={{ color: 'var(--sb-accent)' }}>Better</span>
+          </div>
+          <nav style={{ display: 'flex', gap: '4px', flex: 1 }}>
+            {[['apuestas', 'Apuestas'], ['aprende', 'Aprendé'], ['apoyo', 'Apoyo']].map(([id, t]) =>
+            <span key={id} onClick={() => setScreen(id)} style={{ fontSize: '13px', fontWeight: 600, padding: '6px 12px', borderRadius: '7px', color: screen === id ? 'var(--sb-text)' : 'var(--sb-text-3)', background: screen === id ? 'var(--sb-surface-2)' : 'transparent', cursor: 'pointer' }}>{t}</span>
+            )}
+          </nav>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px', background: 'var(--sb-surface)', borderRadius: '8px', border: '1px solid var(--sb-border)' }}>
+            <span style={{ fontSize: '10px', color: 'var(--sb-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: '2px' }}>Tema</span>
+            {Object.entries(ACCENTS).map(([k, v]) =>
+            <button key={k} onClick={() => setAccentKey(k)} title={v.name} style={{ width: '20px', height: '20px', borderRadius: '50%', background: v.a, border: accentKey === k ? '2px solid var(--sb-text)' : '2px solid transparent', cursor: 'pointer', padding: 0 }} />
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '15px', fontVariantNumeric: 'tabular-nums', color: session.net < 0 ? 'var(--sb-loss)' : session.net > 0 ? 'var(--sb-cash)' : 'var(--sb-text)' }}>{session.net >= 0 ? '+' : '−'}{money(Math.abs(session.net))}</div>
+              <div style={{ fontSize: '9px', color: 'var(--sb-truth)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Resultado · ficticio</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ===== mission bar (always present — this is NOT just a book) ===== */}
+      <div style={{ background: 'var(--sb-truth-bg)', borderBottom: '1px solid var(--sb-border)' }}>
+        <div style={{ maxWidth: '1320px', margin: '0 auto', padding: '7px 20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', flexWrap: 'wrap' }}>
+          <SbBadge variant="truth">Simulador · sin dinero real</SbBadge>
+          {session.bets === 0 ?
+          <span style={{ color: 'var(--sb-text-2)' }}>Esto se ve, se siente y funciona como una casa de apuestas real. Esa es exactamente la idea. <strong style={{ color: 'var(--sb-text)' }}>Apostá y mirá qué pasa con tu plata.</strong></span> :
+
+          <span style={{ color: 'var(--sb-text-2)' }}>
+              {session.bets} apuesta{session.bets > 1 ? 's' : ''} · {session.net < 0 ? <>llevás <strong style={{ color: 'var(--sb-loss)', fontFamily: 'var(--font-mono)' }}>{money(Math.abs(session.net))}</strong> perdidos. Invertidos al 8%, en 5 años: <strong style={{ color: 'var(--sb-cash)', fontFamily: 'var(--font-mono)' }}>{money(lostInvested)}</strong>.</> : <>vas <strong style={{ color: 'var(--sb-cash)', fontFamily: 'var(--font-mono)' }}>+{money(session.net)}</strong>. Disfrutalo: la casa quiere que sigas hasta devolverlo.</>}
+            </span>
+          }
+        </div>
+      </div>
+
+      {screen === 'apuestas' &&
+      <BettingScreen {...{ sport, setSport, slip, setSlip, stake, setStake, pick, isActive, combined, payout, impliedProb, avgMargin, expectedLoss, placeBet, setScreen, slipCollapsed, setSlipCollapsed }} />
+      }
+      {screen === 'aprende' && <LearnScreen />}
+      {screen === 'apoyo' && <SupportScreen />}
+
+      <footer style={{ borderTop: '1px solid var(--sb-border)', padding: '18px 20px', textAlign: 'center' }}>
+        <p style={{ margin: 0, fontSize: '11px', color: 'var(--sb-text-3)', lineHeight: 1.6, maxWidth: '640px', marginInline: 'auto' }}>
+          <strong style={{ color: 'var(--sb-text-2)' }}>NoBetter</strong> es un simulador educativo. Las cuotas son reales; el dinero es ficticio. No procesamos pagos ni apuestas reales. Si las apuestas dejaron de ser un juego, no estás solo: <span onClick={() => setScreen('apoyo')} style={{ color: 'var(--sb-accent)', cursor: 'pointer' }}>buscá apoyo acá</span>.
+        </p>
+      </footer>
+
+      {result && <ResultModal result={result} onClose={() => setResult(null)} onLearn={() => {setResult(null);setScreen('aprende');}} />}
+    </div>);
+
+}
+
+/* ─────────── betting screen ─────────── */
+function BettingScreen({ sport, setSport, slip, setSlip, stake, setStake, pick, isActive, combined, payout, impliedProb, avgMargin, expectedLoss, placeBet, setScreen, slipCollapsed, setSlipCollapsed }) {
+  return (
+    <React.Fragment>
+    <div style={{ maxWidth: '1320px', margin: '0 auto', display: 'grid', gridTemplateColumns: '196px minmax(0, 1fr)', gap: '16px', padding: '16px 20px', alignItems: 'start' }}>
+
+      {/* left rail */}
+      <aside style={{ background: 'var(--sb-surface)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-radius)', overflow: 'hidden', position: 'sticky', top: '120px' }}>
+        <div style={{ padding: '10px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sb-text-3)', borderBottom: '1px solid var(--sb-border)' }}>Deportes</div>
+        {SPORTS.map((s) => {
+          const active = s.id === sport;
+          return (
+            <button key={s.id} onClick={() => setSport(s.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 14px', background: active ? 'var(--sb-surface-2)' : 'transparent', border: 'none', borderLeft: active ? '3px solid var(--sb-accent)' : '3px solid transparent', cursor: 'pointer', color: active ? 'var(--sb-text)' : 'var(--sb-text-2)', fontSize: '13px', fontWeight: 600 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {s.live && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sb-live)', animation: 'sbpulse 1.4s ease-in-out infinite' }} />}
+                {s.name}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--sb-text-3)' }}>{s.count}</span>
+            </button>);
+
+        })}
+      </aside>
+
+      {/* center */}
+      <main style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
+        <section style={{ borderRadius: 'var(--sb-radius)', border: '1px solid var(--sb-border)', background: 'var(--sb-grad-live)', padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <SbBadge variant="live" live>En vivo {LIVE.minute}</SbBadge>
+              <span style={{ fontSize: '11px', color: 'var(--sb-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{LIVE.league}</span>
+            </div>
+            <SbBadge variant="truth">Margen casa {LIVE.margin}%</SbBadge>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ textAlign: 'center', minWidth: '110px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}><Flag team={LIVE.home} size={34} /><div style={{ fontSize: '17px', fontWeight: 700 }}>{displayTeam(LIVE.home)}</div></div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '30px' }}>{LIVE.sh}<span style={{ color: 'var(--sb-text-3)', margin: '0 6px' }}>:</span>{LIVE.sa}</div>
+              <div style={{ textAlign: 'center', minWidth: '110px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px' }}><Flag team={LIVE.away} size={34} /><div style={{ fontSize: '17px', fontWeight: 700 }}>{displayTeam(LIVE.away)}</div></div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {LIVE.odds.map((o, i) => <SbOddsTile key={i} label={['1', 'X', '2'][i]} odds={o} move={LIVE.moves[i]} active={isActive(LIVE.id, i)} onClick={() => pick(LIVE, i)} />)}
+            </div>
+          </div>
+        </section>
+
+        <section style={{ borderRadius: 'var(--sb-radius)', border: '1px solid var(--sb-border)', background: 'var(--sb-surface)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--sb-border)' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700 }}>Próximos partidos</span>
+            <span style={{ fontSize: '11px', color: 'var(--sb-text-3)' }}>Resultado final · 1X2</span>
+          </div>
+          {MATCHES.map((m, idx) =>
+          <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '58px 1fr auto', gap: '14px', alignItems: 'center', padding: '12px 16px', borderBottom: idx < MATCHES.length - 1 ? '1px solid var(--sb-border-soft)' : 'none' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '13px' }}>{m.time}</div>
+                <div style={{ fontSize: '9px', color: 'var(--sb-text-3)', textTransform: 'uppercase' }}>{m.tag}</div>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600 }}><Flag team={m.home} size={20} />{displayTeam(m.home)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, marginTop: '4px' }}><Flag team={m.away} size={20} />{displayTeam(m.away)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                  <SbBadge variant="accent">+{m.markets} mercados</SbBadge>
+                  <span style={{ fontSize: '10px', color: 'var(--sb-truth)', fontWeight: 600 }}>casa {m.margin}%</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {m.odds.map((o, i) => <SbOddsTile key={i} label={['1', 'X', '2'][i]} odds={o} move={m.moves[i]} active={isActive(m.id, i)} onClick={() => pick(m, i)} />)}
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+
+    </div>
+
+    <FloatingBoleto {...{ collapsed: slipCollapsed, setCollapsed: setSlipCollapsed, slip, setSlip, stake, setStake, combined, payout, impliedProb, avgMargin, expectedLoss, placeBet }} />
+    </React.Fragment>);
+
+}
+
+/* ─────────── floating, collapsible bet slip (docked bottom-right) ─────────── */
+function FloatingBoleto({ collapsed, setCollapsed, slip, setSlip, stake, setStake, combined, payout, impliedProb, avgMargin, expectedLoss, placeBet }) {
+  const count = slip.length;
+  return (
+    <div style={{ position: 'fixed', right: '20px', bottom: '20px', width: '340px', maxWidth: 'calc(100vw - 40px)', zIndex: 60, borderRadius: '12px', border: '1px solid var(--sb-border)', background: 'var(--sb-surface)', boxShadow: 'var(--sb-shadow)', display: 'flex', flexDirection: 'column', maxHeight: collapsed ? 'none' : 'calc(100vh - 160px)', overflow: 'hidden' }}>
+
+      {/* header — click to minimize / expand */}
+      <div onClick={() => setCollapsed((c) => !c)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '12px 16px', background: 'var(--sb-surface-2)', borderBottom: collapsed ? 'none' : '1px solid var(--sb-border)', userSelect: 'none' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--sb-text)' }}>
+          Boleto
+          {count > 0 && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', background: 'var(--sb-accent)', color: 'var(--sb-on-accent)', fontWeight: 700, borderRadius: '999px', padding: '2px 8px' }}>{count}</span>}
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {collapsed && count > 0 && <span style={{ fontSize: '11px', color: 'var(--sb-cash)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{money(stake * combined)}</span>}
+          <span title={collapsed ? 'Desplegar' : 'Minimizar'} style={{ color: 'var(--sb-text-3)', fontSize: '11px', display: 'inline-block', transition: 'transform .2s ease', transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>▾</span>
+        </span>
+      </div>
+
+      {!collapsed &&
+      <div style={{ overflowY: 'auto', flex: 1 }}>
+        {count === 0 ?
+        <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--sb-text-3)' }}>
+            <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6 }}>Tocá una cuota.<br />Te mostramos lo que <em style={{ color: 'var(--sb-truth)' }}>de verdad</em> pasa con cada peso.</p>
+          </div> :
+
+        <div>
+            {slip.map((s) =>
+          <div key={s.key} style={{ padding: '12px 16px', borderBottom: '1px solid var(--sb-border-soft)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700 }}>{PICK_LABELS[s.sel]}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--sb-text-3)', marginTop: '1px' }}>{s.teams}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '14px', color: 'var(--sb-accent)' }}>{s.odds.toFixed(2)}</span>
+                    <button onClick={() => setSlip((p) => p.filter((x) => x.key !== s.key))} style={{ background: 'none', border: 'none', color: 'var(--sb-text-3)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0 }}>×</button>
+                  </div>
+                </div>
+              </div>
+          )}
+
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--sb-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--sb-text-2)' }}>Importe (ficticio)</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--sb-surface-3)', border: '1px solid var(--sb-border)', borderRadius: '7px', padding: '5px 10px' }}>
+                  <span style={{ color: 'var(--sb-text-3)', fontFamily: 'var(--font-mono)' }}>$</span>
+                  <input type="number" value={stake} min={1} onChange={(e) => setStake(Math.max(0, Number(e.target.value)))} style={{ width: '56px', background: 'transparent', border: 'none', outline: 'none', color: 'var(--sb-text)', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '14px', textAlign: 'right' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[5, 10, 25, 50].map((v) => <button key={v} onClick={() => setStake(v)} style={{ flex: 1, padding: '5px 0', borderRadius: '6px', border: '1px solid var(--sb-border)', background: 'var(--sb-surface-3)', color: 'var(--sb-text-2)', fontFamily: 'var(--font-mono)', fontSize: '11px', cursor: 'pointer' }}>{v}</button>)}
+              </div>
+            </div>
+
+            {/* TRUTH-FIRST panel */}
+            <div style={{ margin: '14px 16px', borderRadius: '8px', background: 'var(--sb-truth-bg)', border: '1px solid rgba(245,165,36,0.25)', padding: '12px' }}>
+              <div style={{ marginBottom: '8px' }}><SbBadge variant="truth">La cuenta real</SbBadge></div>
+              <Truth label="Probabilidad real de ganar" value={Math.max(0, impliedProb - avgMargin).toFixed(1) + '%'} />
+              <Truth label="Comisión de la casa" value={'~' + avgMargin.toFixed(1) + '%'} />
+              <Truth label="Pérdida esperada a la larga" value={'−' + money(expectedLoss)} danger />
+              <p style={{ margin: '8px 0 0', fontSize: '10px', lineHeight: 1.5, color: 'var(--sb-text-3)' }}>Por cada {money(stake)}, en promedio perdés {money(expectedLoss)}. No es mala suerte: es el diseño.</p>
+            </div>
+
+            {/* potential — secondary now */}
+            <div style={{ padding: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12px' }}>
+              <Row label="Cuota total" value={combined.toFixed(2)} />
+              <Row label="Si ganás (pasa poco)" value={money(payout)} valueColor="var(--sb-text-2)" />
+            </div>
+
+            <div style={{ padding: '0 16px 16px' }}>
+              <SbButton glow fullWidth onClick={placeBet}>Apostar {money(stake)} igual</SbButton>
+              <p style={{ margin: '8px 0 0', textAlign: 'center', fontSize: '10px', color: 'var(--sb-text-3)' }}>Vas a ver exactamente qué pasó con tu plata.</p>
+            </div>
+          </div>
+        }
+      </div>
+      }
+    </div>);
+
+}
+
+/* ─────────── reality-check modal (the unmask) ─────────── */
+function ResultModal({ result, onClose, onLearn }) {
+  const { won, delta, stake } = result;
+  const investedAlt = stake * Math.pow(1.08, 5);
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(6,7,14,0.78)', backdropFilter: 'blur(4px)', animation: 'sbscrim .2s ease' }} />
+      <div style={{ position: 'relative', width: '420px', maxWidth: '100%', background: 'var(--sb-surface)', border: '1px solid var(--sb-border)', borderRadius: '14px', overflow: 'hidden', boxShadow: 'var(--sb-shadow)', animation: 'sbfade .25s ease' }}>
+        {/* header band */}
+        <div style={{ padding: '22px 24px', background: won ? 'rgba(31,209,122,0.10)' : 'var(--sb-grad-live)', borderBottom: '1px solid var(--sb-border)' }}>
+          <SbBadge variant={won ? 'cash' : 'truth'}>{won ? 'Ganaste esta vez' : 'Perdiste'}</SbBadge>
+          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '40px', marginTop: '10px', color: won ? 'var(--sb-cash)' : 'var(--sb-loss)' }}>{delta >= 0 ? '+' : '−'}{money(Math.abs(delta))}</div>
+          <div style={{ fontSize: '12px', color: 'var(--sb-text-2)', marginTop: '2px' }}>en dinero ficticio</div>
+        </div>
+        {/* the message */}
+        <div style={{ padding: '20px 24px' }}>
+          {won ?
+          <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.65, color: 'var(--sb-text-2)' }}>
+              Ganaste — y así es como te enganchan. La casa <strong style={{ color: 'var(--sb-text)' }}>quiere</strong> que ganes al principio. Con su margen de ~7%, si seguís apostando, la matemática garantiza que se lo lleva todo y más. El único movimiento ganador a largo plazo es <strong style={{ color: 'var(--sb-cash)' }}>no jugar</strong>.
+            </p> :
+
+          <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.65, color: 'var(--sb-text-2)' }}>
+              No fue mala suerte. Las cuotas estaban diseñadas para que, en promedio, perdieras. Esos <strong style={{ color: 'var(--sb-text)' }}>{money(stake)}</strong> en un fondo indexado al 8% anual, en 5 años serían <strong style={{ color: 'var(--sb-cash)', fontFamily: 'var(--font-mono)' }}>{money(investedAlt)}</strong>.
+            </p>
+          }
+          <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
+            <SbButton variant="secondary" fullWidth onClick={onClose}>Seguir simulando</SbButton>
+            <SbButton fullWidth onClick={onLearn}>Ver la matemática</SbButton>
+          </div>
+        </div>
+      </div>
+    </div>);
+
+}
+
+/* ─────────── learn screen ─────────── */
+function LearnScreen() {
+  const [perWeek, setPerWeek] = useState(20);
+  const [years, setYears] = useState(5);
+  const totalWagered = perWeek * 52 * years;
+  const expectedLost = totalWagered * 0.07;
+  const r = 0.08 / 52;
+  const invested = perWeek * ((Math.pow(1 + r, 52 * years) - 1) / r);
+  const maxBar = Math.max(invested, totalWagered, 1);
+
+  return (
+    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', margin: 0, letterSpacing: '-0.01em' }}>Por qué la casa siempre gana</h1>
+        <p style={{ margin: '6px 0 0', fontSize: '14px', color: 'var(--sb-text-2)' }}>No es opinión. Es aritmética, y está en cada cuota que tocaste recién.</p>
+      </div>
+
+      <Panel title="Las cuotas ya vienen cargadas">
+        <p style={{ margin: '0 0 14px', fontSize: '13px', lineHeight: 1.6, color: 'var(--sb-text-2)' }}>Las tres opciones de un partido cubren todo lo que puede pasar: sus probabilidades reales suman 100%. Pero las probabilidades que <em>implican</em> las cuotas suman más. Ese excedente es la comisión de la casa.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '14px' }}>
+          {[['Local', '2.10', '47.6%'], ['Empate', '3.30', '30.3%'], ['Visitante', '3.40', '29.4%']].map(([l, o, p]) =>
+          <div key={l} style={{ borderRadius: '8px', border: '1px solid var(--sb-border)', background: 'var(--sb-surface-2)', padding: '14px', textAlign: 'center' }}>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--sb-text-3)' }}>{l}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, margin: '4px 0' }}>{o}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--sb-text-2)' }}>implica {p}</div>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--sb-truth-bg)', border: '1px solid rgba(245,165,36,0.25)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px' }}>
+          <span style={{ color: 'var(--sb-text-2)' }}>47.6 + 30.3 + 29.4 =</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--sb-truth)' }}>107.3% → la casa se queda ~7%</span>
+        </div>
+      </Panel>
+
+      <Panel title="Mismo dinero, dos destinos">
+        <p style={{ margin: '0 0 16px', fontSize: '13px', lineHeight: 1.6, color: 'var(--sb-text-2)' }}>Ajustá cuánto apostarías por semana y por cuánto tiempo. Comparamos apostar contra invertir lo mismo.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '8px' }}><span style={{ color: 'var(--sb-text-2)' }}>Por semana</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--sb-accent)' }}>{money(perWeek)}</span></div>
+            <input type="range" min={5} max={100} step={5} value={perWeek} onChange={(e) => setPerWeek(Number(e.target.value))} style={{ width: '100%' }} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '8px' }}><span style={{ color: 'var(--sb-text-2)' }}>Durante</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--sb-accent)' }}>{years} {years === 1 ? 'año' : 'años'}</span></div>
+            <input type="range" min={1} max={20} step={1} value={years} onChange={(e) => setYears(Number(e.target.value))} style={{ width: '100%' }} />
+          </div>
+        </div>
+        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--sb-text-3)', marginBottom: '12px' }}>Total que pasaría por tus manos: <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--sb-text)' }}>{money(totalWagered)}</span></div>
+        <CompareBar label="Apostando — pérdida esperada por el margen" value={-expectedLost} width={expectedLost / maxBar * 100} tone="loss" />
+        <div style={{ height: '10px' }} />
+        <CompareBar label="Invirtiendo en un fondo indexado (8% anual)" value={invested} width={invested / maxBar * 100} tone="cash" />
+        <p style={{ margin: '14px 0 0', fontSize: '11px', lineHeight: 1.5, color: 'var(--sb-text-3)' }}>La inversión asume una tasa histórica conservadora; rendimiento pasado no garantiza rendimiento futuro. La pérdida al apostar, en cambio, está garantizada por diseño.</p>
+      </Panel>
+    </div>);
+
+}
+
+/* ─────────── support screen ─────────── */
+function SupportScreen() {
+  return (
+    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '32px', margin: 0, letterSpacing: '-0.01em' }}>Apoyo</h1>
+        <p style={{ margin: '6px 0 0', fontSize: '14px', color: 'var(--sb-text-2)' }}>Si esto dejó de sentirse como un juego, esta página es para vos. Sin juicios.</p>
+      </div>
+      <Panel title="Señales de alerta">
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          {['Apostar cada vez más para sentir la misma emoción.', 'Intentar recuperar lo perdido apostando más.', 'Mentir u ocultar cuánto o cuándo apostás.', 'Pedir prestado o vender cosas para apostar.', 'Discutir con personas cercanas por el juego.', 'Pensar en apostar gran parte del día.'].map((s) =>
+          <li key={s} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--sb-text-2)', lineHeight: 1.5 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sb-truth)', flexShrink: 0, marginTop: '7px' }} />{s}
+            </li>
+          )}
+        </ul>
+      </Panel>
+      <Panel title="Líneas y grupos de ayuda">
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {[['Jugadores Anónimos', 'https://www.jugadoresanonimos.org', 'Reuniones gratuitas y anónimas, presenciales y en línea.'], ['FEJAR — España', 'https://www.fejar.org', 'Federación de rehabilitación; orientación y derivación.'], ['Gamblers Anonymous', 'https://www.gamblersanonymous.org', 'Directorio de reuniones por país.']].map(([n, h, d]) =>
+          <li key={n}>
+              <a href={h} target="_blank" rel="noreferrer" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--sb-accent)', textDecoration: 'none' }}>{n} →</a>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--sb-text-2)' }}>{d}</p>
+            </li>
+          )}
+        </ul>
+      </Panel>
+    </div>);
+
+}
+
+/* ─────────── helpers ─────────── */
+function Panel({ title, children }) {
+  return (
+    <section style={{ borderRadius: 'var(--sb-radius)', border: '1px solid var(--sb-border)', background: 'var(--sb-surface)', overflow: 'hidden' }}>
+      <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--sb-border)', fontFamily: 'var(--font-serif)', fontSize: '17px' }}>{title}</div>
+      <div style={{ padding: '18px' }}>{children}</div>
+    </section>);
+
+}
+function Row({ label, value, valueColor }) {
+  return <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}><span style={{ color: 'var(--sb-text-2)' }}>{label}</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '13px', color: valueColor || 'var(--sb-text)', fontVariantNumeric: 'tabular-nums' }}>{value}</span></div>;
+}
+function Truth({ label, value, danger }) {
+  return <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '2px 0' }}><span style={{ fontSize: '11px', color: 'var(--sb-text-2)' }}>{label}</span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '12px', color: danger ? 'var(--sb-loss)' : 'var(--sb-truth)', fontVariantNumeric: 'tabular-nums' }}>{value}</span></div>;
+}
+function CompareBar({ label, value, width, tone }) {
+  const c = tone === 'cash' ? 'var(--sb-cash)' : 'var(--sb-loss)';
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', marginBottom: '5px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--sb-text-2)' }}>{label}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: c }}>{value < 0 ? '−' : '+'}{money(Math.abs(value))}</span>
+      </div>
+      <div style={{ height: '10px', borderRadius: '999px', background: 'var(--sb-surface-3)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', borderRadius: '999px', background: c, width: `${Math.max(width, 3)}%`, transition: 'width .3s ease' }} />
+      </div>
+    </div>);
+
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

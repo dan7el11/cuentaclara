@@ -1,0 +1,129 @@
+<!-- @dsCard group="Components" viewport="700x460" name="Core Components" subtitle="Button · Badge · Card · Input · OddsButton · LedgerRule · Tab" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  body { margin:0; padding:16px 20px; background:var(--color-bg); }
+  .section { margin-bottom:16px; }
+  .section-label { font-family:var(--font-mono); font-size:10px; color:var(--color-text-subtle); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; }
+  .row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { Button, Badge, Card, Input, OddsButton, LedgerRule, Tab } = window.NoBetterDesignSystem_40bf4b;
+
+function Specimen() {
+  const [pick, setPick] = React.useState(null);
+  const [tab, setTab] = React.useState('apuestas');
+  const [val, setVal] = React.useState('');
+
+  return (
+    <div>
+
+      {/* BUTTON */}
+      <div className="section">
+        <div className="section-label">Button</div>
+        <div className="row">
+          <Button>Realizar apuesta ficticia</Button>
+          <Button variant="secondary">Cancelar</Button>
+          <Button variant="ghost">Ver historial</Button>
+          <Button variant="danger">Eliminar</Button>
+          <Button variant="success">Activar</Button>
+          <Button variant="outline">Educación</Button>
+          <Button disabled>Desactivado</Button>
+          <Button size="sm">sm</Button>
+          <Button size="lg">lg</Button>
+        </div>
+      </div>
+
+      <LedgerRule margin="0 0 14px 0" />
+
+      {/* BADGE */}
+      <div className="section">
+        <div className="section-label">Badge</div>
+        <div className="row">
+          <Badge variant="ficticia">ficticia</Badge>
+          <Badge variant="ochre" dot>Modo simulador</Badge>
+          <Badge variant="burgundy" uppercase>DESTACADO</Badge>
+          <Badge variant="sage">Ganaste</Badge>
+          <Badge variant="slate">LaLiga</Badge>
+          <Badge variant="ink">Premier</Badge>
+          <Badge>dinero ficticio</Badge>
+        </div>
+      </div>
+
+      <LedgerRule margin="14px 0" />
+
+      {/* ODDS BUTTON */}
+      <div className="section">
+        <div className="section-label">OddsButton — light &amp; dark</div>
+        <div className="row" style={{marginBottom:'8px'}}>
+          <OddsButton label="1" odds={2.10} active={pick==='home'} onClick={()=>setPick('home')} />
+          <OddsButton label="X" odds={3.30} active={pick==='draw'} onClick={()=>setPick('draw')} />
+          <OddsButton label="2" odds={3.40} active={pick==='away'} onClick={()=>setPick('away')} />
+          <span style={{fontFamily:'var(--font-mono)',fontSize:'11px',color:'var(--color-text-subtle)',marginLeft:'4px'}}>light (fixture row)</span>
+        </div>
+        <div className="row" style={{background:'var(--gradient-slate)',padding:'12px 14px',borderRadius:'10px'}}>
+          <OddsButton label="1" odds={1.85} onDark active={pick==='hdark'} onClick={()=>setPick('hdark')} />
+          <OddsButton label="X" odds={3.60} onDark active={pick==='xdark'} onClick={()=>setPick('xdark')} />
+          <OddsButton label="2" odds={4.20} onDark active={pick==='adark'} onClick={()=>setPick('adark')} />
+          <span style={{fontFamily:'var(--font-mono)',fontSize:'11px',color:'rgba(255,255,255,0.5)',marginLeft:'4px'}}>dark (featured match)</span>
+        </div>
+      </div>
+
+      <LedgerRule margin="14px 0" />
+
+      {/* TAB + INPUT */}
+      <div style={{display:'flex',gap:'24px',alignItems:'flex-start'}}>
+        <div className="section" style={{flex:1}}>
+          <div className="section-label">Tab</div>
+          <div className="row">
+            <Tab active={tab==='cuenta'} onClick={()=>setTab('cuenta')}>Cuenta</Tab>
+            <Tab active={tab==='apuestas'} onClick={()=>setTab('apuestas')}>Apuestas</Tab>
+            <Tab active={tab==='educacion'} onClick={()=>setTab('educacion')}>Educación financiera</Tab>
+            <Tab active={tab==='apoyo'} onClick={()=>setTab('apoyo')}>Apoyo</Tab>
+          </div>
+        </div>
+        <div className="section" style={{flex:1}}>
+          <div className="section-label">Input</div>
+          <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+            <Input label="Monto (ficticio)" type="number" mono prefix="$" value={val} onChange={e=>setVal(e.target.value)} placeholder="10" />
+            <Input label="Correo" type="email" placeholder="correo@ejemplo.com" />
+            <Input label="Error" type="text" error="Campo requerido" placeholder="…" />
+          </div>
+        </div>
+      </div>
+
+      <LedgerRule margin="14px 0" />
+
+      {/* CARD */}
+      <div className="section">
+        <div className="section-label">Card — default · header · gradient</div>
+        <div className="row" style={{alignItems:'stretch'}}>
+          <Card style={{flex:1,minWidth:'180px'}} header="Extracto resumido">
+            <div style={{fontFamily:'var(--font-sans)',fontSize:'12px',color:'var(--color-text-muted)'}}>Total apostado</div>
+            <div style={{fontFamily:'var(--font-mono)',fontSize:'18px',fontWeight:600,fontVariantNumeric:'tabular-nums',color:'var(--color-text)'}}>$24.00</div>
+          </Card>
+          <Card gradient style={{flex:1,minWidth:'180px'}}>
+            <div style={{color:'rgba(255,255,255,0.6)',fontFamily:'var(--font-sans)',fontSize:'11px',textTransform:'uppercase',letterSpacing:'0.14em'}}>Saldo ficticio</div>
+            <div style={{fontFamily:'var(--font-mono)',fontSize:'28px',fontWeight:600,color:'#fff',fontVariantNumeric:'tabular-nums'}}>$76.00</div>
+          </Card>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Specimen />);
+</script>
+</body>
+</html>
