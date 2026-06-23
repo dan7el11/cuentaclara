@@ -82,7 +82,9 @@ function settleBetLegs(legs: any[], scores: Map<string, FixtureScore>): LegResul
   for (const leg of legs) {
     const s = scores.get(leg.fixtureId)
     if (!s) return null
-    results.push(settleSelection(leg.marketKey, leg.selectionCode, leg.point, s.homeScore, s.awayScore))
+    const marketKey = leg.marketKey ?? 'h2h' // apuestas viejas eran 1X2
+    const code = leg.selectionCode ?? leg.outcomeCode ?? ''
+    results.push(settleSelection(marketKey, code, leg.point, s.homeScore, s.awayScore))
   }
   if (results.length === 0) return null
   if (results.some((r) => r === 'lost')) return 'lost'
