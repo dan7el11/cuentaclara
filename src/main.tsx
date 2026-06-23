@@ -5,6 +5,7 @@ import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import './design/tokens.css'
+import './design/themes.css'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

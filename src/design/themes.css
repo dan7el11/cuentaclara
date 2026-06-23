@@ -1,0 +1,84 @@
+/* Temas de muestra para /muestra — sobrescriben los tokens dentro de un
+   contenedor. Sirven para comparar estilos sin cambiar la app real. */
+
+/* 1 — Oscuro (sportsbook): índigo casi negro + violeta */
+.theme-dark {
+  --color-bg: #0c0d17;
+  --color-surface: #181a2b;
+  --color-surface-tinted: #20223a;
+  --color-border: #2c2f4d;
+  --color-text: #f3f4fb;
+  --color-text-muted: #b4b6cf;
+  --color-text-subtle: #7b7e9c;
+  --color-primary: #7b5cff;
+  --color-primary-dark: #6a4af0;
+  --color-primary-bg: rgba(123, 92, 255, 0.16);
+  --color-primary-border: rgba(123, 92, 255, 0.4);
+  --color-paper: #ffffff;
+  --color-danger: #f0455a;
+  --color-danger-bg: rgba(240, 69, 90, 0.12);
+  --color-danger-border: rgba(240, 69, 90, 0.4);
+  --color-success: #1fd17a;
+  --color-success-bg: rgba(31, 209, 122, 0.12);
+  --color-success-border: rgba(31, 209, 122, 0.4);
+  --color-warning: #f5a524;
+  --color-warning-bg: rgba(245, 165, 36, 0.12);
+  --color-warning-border: rgba(245, 165, 36, 0.4);
+  --gradient-slate: linear-gradient(160deg, #221b4d 0%, #141228 55%, #0c0d17 100%);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --radius-xl: 10px;
+  --ledger-rule-bg: repeating-linear-gradient(to right, #2c2f4d 0, #2c2f4d 6px, transparent 6px, transparent 12px);
+}
+
+/* 2 — Fintech moderno: claro, azul brillante, aireado, más redondeado */
+.theme-fintech {
+  --color-bg: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-surface-tinted: #f1f5fb;
+  --color-border: #e3e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-subtle: #94a3b8;
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-bg: rgba(37, 99, 235, 0.08);
+  --color-primary-border: rgba(37, 99, 235, 0.25);
+  --color-paper: #ffffff;
+  --color-ink: #0f172a;
+  --color-danger: #dc2626;
+  --color-danger-bg: rgba(220, 38, 38, 0.08);
+  --color-danger-border: rgba(220, 38, 38, 0.3);
+  --color-success: #16a34a;
+  --color-success-bg: rgba(22, 163, 74, 0.08);
+  --color-success-border: rgba(22, 163, 74, 0.3);
+  --color-warning: #d97706;
+  --color-warning-bg: rgba(217, 119, 6, 0.08);
+  --color-warning-border: rgba(217, 119, 6, 0.3);
+  --gradient-slate: linear-gradient(118deg, #1d4ed8 0%, #3b82f6 100%);
+  --shadow-card: 0 10px 30px -12px rgba(15, 23, 42, 0.18);
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --ledger-rule-bg: repeating-linear-gradient(to right, #e3e8f0 0, #e3e8f0 5px, transparent 5px, transparent 11px);
+}
+
+/* 3 — Cálido refrescado: mismo papel, acento teal, esquinas más redondeadas */
+.theme-warm {
+  --color-bg: #f3efe6;
+  --color-surface: #fffdf8;
+  --color-surface-tinted: rgba(243, 239, 230, 0.6);
+  --color-border: #e3dcc9;
+  --color-text: #1c2430;
+  --color-text-muted: rgba(28, 36, 48, 0.6);
+  --color-text-subtle: rgba(28, 36, 48, 0.45);
+  --color-primary: #117a65;
+  --color-primary-dark: #0d5f4f;
+  --color-primary-bg: rgba(17, 122, 101, 0.1);
+  --color-primary-border: rgba(17, 122, 101, 0.25);
+  --color-paper: #fffdf8;
+  --gradient-slate: linear-gradient(118deg, #0d5f4f 0%, #117a65 55%, #2f9e86 100%);
+  --shadow-card: 0 20px 50px -24px rgba(28, 36, 48, 0.5);
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
