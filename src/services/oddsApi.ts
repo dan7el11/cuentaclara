@@ -1,30 +1,43 @@
 import type { BetSelection } from '../types'
+import type { FixtureScore } from '../utils/settlement'
 
-// La clave de API-Football ya NO vive en el cliente: vive como secreto de
-// la Cloud Function `getOdds` (ver /functions). El cliente solo conoce la
-// URL pública de esa función, vía VITE_GETODDS_URL.
+// La clave de The Odds API vive como secreto del servidor (función Netlify
+// getOdds). El cliente solo conoce la URL pública, vía VITE_GETODDS_URL.
 const GET_ODDS_URL = import.meta.env.VITE_GETODDS_URL as string | undefined
 
+// Lista / destacado: solo 1X2 (una superficie liviana).
 export interface RawFixtureOdds {
   fixtureId: string
   label: string
   market: string
-  sport?: string // competición (clave The Odds API); ausente en datos de ejemplo
-  kickoff?: string // hora de inicio en ISO 8601 (puede faltar en datos de ejemplo)
+  sport?: string
+  kickoff?: string
   options: { pick: string; decimalOdds: number; outcomeCode: 'home' | 'draw' | 'away' }[]
 }
 
-/** Resultado real de un partido terminado, devuelto por ?scores=1. */
-export interface FixtureResult {
+// Detalle de un partido: todos los mercados disponibles.
+export interface MarketSelectionDTO {
+  selectionCode: string
+  label: string
+  point?: number
+  decimalOdds: number
+}
+export interface DetailMarket {
+  key: string
+  label: string
+  selections: MarketSelectionDTO[]
+}
+export interface FixtureDetail {
   fixtureId: string
-  outcome: 'home' | 'draw' | 'away'
+  label: string
+  sport: string
+  kickoff: string
+  home: string
+  away: string
+  markets: DetailMarket[]
 }
 
-// Datos de respaldo para poder desarrollar y probar la interfaz sin
-// desplegar todavía la Cloud Function. Estos fixtures de ejemplo NO se
-// pueden resolver automáticamente (no existen en API-Football) — están
-// pensados para probar el flujo manual de "simular que ganó/perdió" en
-// Apuestas.tsx, no la resolución automática del backend.
+// Datos de respaldo para desarrollar sin backend desplegado (modo demo).
 const MOCK_FIXTURES: RawFixtureOdds[] = [
   {
     fixtureId: 'mock-1',
@@ -48,37 +61,47 @@ const MOCK_FIXTURES: RawFixtureOdds[] = [
   },
 ]
 
-/**
- * Devuelve las cuotas disponibles. Si VITE_GETODDS_URL está configurada,
- * llama a tu propia Cloud Function (que a su vez llama a API-Football con
- * la clave guardada como secreto). Si no, usa los fixtures de ejemplo.
- */
+/** Cuotas 1X2 de los próximos partidos de una competición. */
 export async function fetchUpcomingOdds(sport?: string): Promise<RawFixtureOdds[]> {
-  if (!GET_ODDS_URL) {
-    return MOCK_FIXTURES
-  }
-
+  if (!GET_ODDS_URL) return MOCK_FIXTURES
   const query = sport ? `?sport=${encodeURIComponent(sport)}` : ''
-  const url = `${GET_ODDS_URL}${query}`
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`No se pudieron obtener las cuotas (status ${res.status})`)
-  }
+  const res = await fetch(`${GET_ODDS_URL}${query}`)
+  if (!res.ok) throw new Error(`No se pudieron obtener las cuotas (status ${res.status})`)
   return (await res.json()) as RawFixtureOdds[]
 }
 
+/** Todos los mercados de un partido (página de detalle). */
+export async function fetchFixtureDetail(sport: string, fixtureId: string): Promise<FixtureDetail> {
+  if (!GET_ODDS_URL) throw new Error('Detalle no disponible en modo demo')
+  const res = await fetch(
+    `${GET_ODDS_URL}?event=${encodeURIComponent(fixtureId)}&sport=${encodeURIComponent(sport)}`
+  )
+  if (!res.ok) throw new Error(`No se pudo obtener el partido (status ${res.status})`)
+  return (await res.json()) as FixtureDetail
+}
+
 /**
- * Resultados de partidos terminados de una competición, para resolver
- * apuestas pendientes. Si no hay backend configurado, no hay resultados
- * reales que consultar (los datos de ejemplo se resuelven a mano).
+ * Marcadores de partidos terminados, para resolver apuestas pendientes.
+ * Sin backend configurado no hay resultados reales que consultar.
  */
-export async function fetchScores(sport: string): Promise<FixtureResult[]> {
+export async function fetchScores(sport: string): Promise<FixtureScore[]> {
   if (!GET_ODDS_URL) return []
   const res = await fetch(`${GET_ODDS_URL}?scores=1&sport=${encodeURIComponent(sport)}`)
   if (!res.ok) throw new Error(`No se pudieron obtener resultados (status ${res.status})`)
-  return (await res.json()) as FixtureResult[]
+  return (await res.json()) as FixtureScore[]
 }
 
+/** Identidad estable de una selección (para alternarla en el boleto). */
+export function selectionKey(s: {
+  fixtureId: string
+  marketKey: string
+  selectionCode: string
+  point?: number
+}): string {
+  return `${s.fixtureId}|${s.marketKey}|${s.selectionCode}|${s.point ?? ''}`
+}
+
+/** Selección 1X2 desde la lista/destacado. */
 export function toBetSelection(
   fixture: RawFixtureOdds,
   option: RawFixtureOdds['options'][number]
@@ -86,10 +109,30 @@ export function toBetSelection(
   return {
     fixtureId: fixture.fixtureId,
     fixtureLabel: fixture.label,
-    market: fixture.market,
-    pick: option.pick,
-    decimalOdds: option.decimalOdds,
-    outcomeCode: option.outcomeCode,
     sport: fixture.sport,
+    marketKey: 'h2h',
+    marketLabel: 'Resultado (1X2)',
+    selectionCode: option.outcomeCode,
+    selectionLabel: option.pick,
+    decimalOdds: option.decimalOdds,
+  }
+}
+
+/** Selección desde la página de detalle (cualquier mercado). */
+export function toDetailSelection(
+  detail: FixtureDetail,
+  market: DetailMarket,
+  sel: MarketSelectionDTO
+): BetSelection {
+  return {
+    fixtureId: detail.fixtureId,
+    fixtureLabel: detail.label,
+    sport: detail.sport,
+    marketKey: market.key,
+    marketLabel: market.label,
+    selectionCode: sel.selectionCode,
+    selectionLabel: sel.label,
+    point: sel.point,
+    decimalOdds: sel.decimalOdds,
   }
 }

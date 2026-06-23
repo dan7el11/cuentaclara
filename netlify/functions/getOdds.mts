@@ -34,8 +34,121 @@ const cors = { 'Access-Control-Allow-Origin': '*' }
 const CACHE_TTL_MS = 5 * 60 * 1000
 const cache = new Map<string, { at: number; data: any }>()
 
-/** Resultado (home/draw/away) a partir del marcador de un partido terminado. */
-function outcomeFromGame(game: any): Outcome | null {
+// Mercados que pedimos para el detalle de un partido. Cada uno cuesta ~1
+// petición por región, así que el detalle se cachea (ver CACHE_TTL_MS).
+const DETAIL_MARKETS = 'h2h,totals,btts,double_chance,spreads'
+
+interface MarketSelection {
+  selectionCode: string // home|draw|away|over|under|yes|no|1X|12|X2
+  label: string
+  point?: number
+  decimalOdds: number
+}
+interface DetailMarket {
+  key: string
+  label: string
+  selections: MarketSelection[]
+}
+
+/** Primer bookmaker que tenga el mercado pedido. */
+function findMarket(ev: any, key: string): any | null {
+  for (const bk of ev.bookmakers ?? []) {
+    const m = (bk.markets ?? []).find((mm: any) => mm.key === key)
+    if (m) return m
+  }
+  return null
+}
+
+/** Construye los mercados normalizados de un evento para el detalle. */
+function buildDetailMarkets(ev: any, home: string, away: string): DetailMarket[] {
+  const out: DetailMarket[] = []
+
+  const h2h = findMarket(ev, 'h2h')
+  if (h2h) {
+    const sel: MarketSelection[] = []
+    for (const code of ['home', 'draw', 'away']) {
+      const name = code === 'home' ? home : code === 'away' ? away : 'Draw'
+      const o = (h2h.outcomes ?? []).find((x: any) => x.name === name)
+      if (o) {
+        sel.push({
+          selectionCode: code,
+          label: code === 'home' ? `${home} gana` : code === 'away' ? `${away} gana` : 'Empate',
+          decimalOdds: Number(o.price),
+        })
+      }
+    }
+    if (sel.length) out.push({ key: 'h2h', label: 'Resultado (1X2)', selections: sel })
+  }
+
+  const dc = findMarket(ev, 'double_chance')
+  if (dc) {
+    const sel: MarketSelection[] = []
+    for (const o of dc.outcomes ?? []) {
+      const n: string = o.name ?? ''
+      const hasHome = n.includes(home)
+      const hasAway = n.includes(away)
+      const hasDraw = n.toLowerCase().includes('draw')
+      let code: string | null = null
+      let label = ''
+      if (hasHome && hasDraw) (code = '1X'), (label = `${home} o empate`)
+      else if (hasHome && hasAway) (code = '12'), (label = 'Cualquiera gana (no empate)')
+      else if (hasDraw && hasAway) (code = 'X2'), (label = `${away} o empate`)
+      if (code) sel.push({ selectionCode: code, label, decimalOdds: Number(o.price) })
+    }
+    if (sel.length) out.push({ key: 'double_chance', label: 'Doble oportunidad', selections: sel })
+  }
+
+  const totals = findMarket(ev, 'totals')
+  if (totals) {
+    const sel: MarketSelection[] = (totals.outcomes ?? [])
+      .map((o: any) => {
+        const isOver = String(o.name).toLowerCase() === 'over'
+        return {
+          selectionCode: isOver ? 'over' : 'under',
+          label: `${isOver ? 'Más' : 'Menos'} de ${o.point} goles`,
+          point: Number(o.point),
+          decimalOdds: Number(o.price),
+        }
+      })
+      .sort((a: MarketSelection, b: MarketSelection) => (a.point ?? 0) - (b.point ?? 0))
+    if (sel.length) out.push({ key: 'totals', label: 'Más / Menos goles', selections: sel })
+  }
+
+  const btts = findMarket(ev, 'btts')
+  if (btts) {
+    const sel: MarketSelection[] = (btts.outcomes ?? []).map((o: any) => {
+      const yes = String(o.name).toLowerCase() === 'yes'
+      return {
+        selectionCode: yes ? 'yes' : 'no',
+        label: yes ? 'Ambos anotan: Sí' : 'Ambos anotan: No',
+        decimalOdds: Number(o.price),
+      }
+    })
+    if (sel.length) out.push({ key: 'btts', label: 'Ambos equipos anotan', selections: sel })
+  }
+
+  const spreads = findMarket(ev, 'spreads')
+  if (spreads) {
+    const sel: MarketSelection[] = (spreads.outcomes ?? [])
+      .map((o: any) => {
+        const isHome = o.name === home
+        const p = Number(o.point)
+        return {
+          selectionCode: isHome ? 'home' : 'away',
+          label: `${isHome ? home : away} ${p > 0 ? '+' : ''}${p}`,
+          point: p,
+          decimalOdds: Number(o.price),
+        }
+      })
+      .sort((a: MarketSelection, b: MarketSelection) => (a.point ?? 0) - (b.point ?? 0))
+    if (sel.length) out.push({ key: 'spreads', label: 'Hándicap (goles)', selections: sel })
+  }
+
+  return out
+}
+
+/** Marcador final (h/a) de un partido terminado, o null si aún no aplica. */
+function scoresFromGame(game: any): { homeScore: number; awayScore: number } | null {
   if (!game?.completed || !Array.isArray(game.scores)) return null
   const home = game.scores.find((s: any) => s.name === game.home_team)
   const away = game.scores.find((s: any) => s.name === game.away_team)
@@ -43,7 +156,7 @@ function outcomeFromGame(game: any): Outcome | null {
   const hs = Number(home.score)
   const as = Number(away.score)
   if (Number.isNaN(hs) || Number.isNaN(as)) return null
-  return hs > as ? 'home' : as > hs ? 'away' : 'draw'
+  return { homeScore: hs, awayScore: as }
 }
 
 export default async (req: Request) => {
@@ -94,10 +207,51 @@ export default async (req: Request) => {
     }
     const games: any[] = await res.json()
     const results = games
-      .map((g) => ({ fixtureId: String(g.id ?? ''), outcome: outcomeFromGame(g) }))
-      .filter((r): r is { fixtureId: string; outcome: Outcome } => r.outcome !== null)
+      .map((g) => {
+        const s = scoresFromGame(g)
+        return s ? { fixtureId: String(g.id ?? ''), ...s } : null
+      })
+      .filter((r): r is { fixtureId: string; homeScore: number; awayScore: number } => r !== null)
     cache.set(cacheKey, { at: Date.now(), data: results })
     return Response.json(results, {
+      headers: { ...cors, 'Cache-Control': 'public, max-age=300', 'X-Cache': 'MISS' },
+    })
+  }
+
+  // ?event=<id>&sport=<key> -> todos los mercados de un partido (detalle).
+  const eventId = params.get('event')
+  if (eventId) {
+    const sport = params.get('sport') ?? 'soccer_fifa_world_cup'
+    const regions = params.get('regions') ?? 'eu'
+    const cacheKey = `event|${sport}|${eventId}|${regions}`
+    const hit = cache.get(cacheKey)
+    if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+      return Response.json(hit.data, {
+        headers: { ...cors, 'Cache-Control': 'public, max-age=300', 'X-Cache': 'HIT' },
+      })
+    }
+    const url = `${BASE_URL}/sports/${sport}/events/${eventId}/odds/?apiKey=${key}&regions=${regions}&markets=${DETAIL_MARKETS}&oddsFormat=decimal`
+    const res = await fetch(url)
+    if (!res.ok) {
+      return Response.json(
+        { error: `The Odds API respondió ${res.status}`, body: await res.text() },
+        { status: res.status, headers: cors }
+      )
+    }
+    const ev: any = await res.json()
+    const home = ev.home_team ?? '?'
+    const away = ev.away_team ?? '?'
+    const detail = {
+      fixtureId: String(ev.id ?? eventId),
+      label: `${home} vs. ${away}`,
+      sport,
+      kickoff: String(ev.commence_time ?? ''),
+      home,
+      away,
+      markets: buildDetailMarkets(ev, home, away),
+    }
+    cache.set(cacheKey, { at: Date.now(), data: detail })
+    return Response.json(detail, {
       headers: { ...cors, 'Cache-Control': 'public, max-age=300', 'X-Cache': 'MISS' },
     })
   }

@@ -307,6 +307,8 @@ function txnLabel(type: Transaction['type']): string {
       return 'Apuesta ganada'
     case 'bet_lost':
       return 'Apuesta perdida'
+    case 'bet_void':
+      return 'Apuesta anulada'
     default:
       return 'Movimiento'
   }

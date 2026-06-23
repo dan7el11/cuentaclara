@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { fetchUpcomingOdds, toBetSelection, type RawFixtureOdds } from '../services/oddsApi'
+import {
+  fetchUpcomingOdds,
+  toBetSelection,
+  selectionKey,
+  type RawFixtureOdds,
+} from '../services/oddsApi'
 import { placeBet, getBetHistory, resolveBet, resolvePendingBets } from '../services/walletService'
 import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
 import ResultModal from '../components/ResultModal'
 import BetHistory from '../components/BetHistory'
+import MatchDetailModal from '../components/MatchDetailModal'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 
 /**
@@ -49,6 +55,7 @@ export default function Apuestas() {
   const [loadingOdds, setLoadingOdds] = useState(false)
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
   const [slipOpen, setSlipOpen] = useState(true)
+  const [detail, setDetail] = useState<{ fixtureId: string; sport: string } | null>(null)
 
   // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
@@ -91,18 +98,21 @@ export default function Apuestas() {
     }
   }, [user])
 
-  function toggleSelection(
-    fixture: RawFixtureOdds,
-    option: RawFixtureOdds['options'][number]
-  ) {
-    const sel = toBetSelection(fixture, option)
+  // Alterna una selección en el boleto. Solo se permite una selección por
+  // (partido, mercado): no podés tomar dos resultados del mismo mercado.
+  function toggleSelection(sel: BetSelection) {
     setSelections((prev) => {
-      const withoutThisFixture = prev.filter((s) => s.fixtureId !== fixture.fixtureId)
-      const alreadyPicked = prev.find(
-        (s) => s.fixtureId === fixture.fixtureId && s.pick === option.pick
+      const key = selectionKey(sel)
+      const exists = prev.some((s) => selectionKey(s) === key)
+      const rest = prev.filter(
+        (s) => !(s.fixtureId === sel.fixtureId && s.marketKey === sel.marketKey)
       )
-      return alreadyPicked ? withoutThisFixture : [...withoutThisFixture, sel]
+      return exists ? rest : [...rest, sel]
     })
+  }
+
+  function openDetail(fixture: RawFixtureOdds) {
+    if (fixture.sport) setDetail({ fixtureId: fixture.fixtureId, sport: fixture.sport })
   }
 
   /**
@@ -129,7 +139,7 @@ export default function Apuestas() {
 
   async function demoResolve(won: boolean) {
     if (!resultBet) return
-    await resolveBet(resultBet.id, won)
+    await resolveBet(resultBet.id, won ? 'won' : 'lost')
     const updated = await getBetHistory(user!.uid)
     setPastBets(updated)
     const resolved = updated.find((b) => b.id === resultBet.id) ?? null
@@ -213,6 +223,7 @@ export default function Apuestas() {
             fixture={featured}
             selections={selections}
             onPick={toggleSelection}
+            onOpenDetail={openDetail}
           />
         )}
 
@@ -229,6 +240,7 @@ export default function Apuestas() {
                   fixture={fixture}
                   selections={selections}
                   onPick={toggleSelection}
+                  onOpenDetail={openDetail}
                 />
               ))}
               {listFixtures.length === 0 && !loadingOdds && !oddsError && (
@@ -273,11 +285,13 @@ export default function Apuestas() {
                   <div>
                     <div className="divide-y divide-paperline">
                       {selections.map((s) => (
-                        <div key={s.fixtureId + s.pick} className="px-4 py-3">
+                        <div key={selectionKey(s)} className="px-4 py-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-ink">{localize(s.pick)}</p>
-                              <p className="figure mt-0.5 text-[11px] text-ink/50">{localize(s.fixtureLabel)}</p>
+                              <p className="text-sm font-medium text-ink">{localize(s.selectionLabel)}</p>
+                              <p className="figure mt-0.5 text-[11px] text-ink/50">
+                                {localize(s.fixtureLabel)} · {s.marketLabel}
+                              </p>
                             </div>
                             <span className="figure text-sm font-semibold text-slate">
                               {s.decimalOdds.toFixed(2)}
@@ -355,6 +369,17 @@ export default function Apuestas() {
       {/* Historial: la pérdida acumulada, visible apuesta por apuesta */}
       <BetHistory bets={pastBets} />
 
+      {/* Detalle del partido: todos los mercados disponibles */}
+      {detail && (
+        <MatchDetailModal
+          fixtureId={detail.fixtureId}
+          sport={detail.sport}
+          selections={selections}
+          onPick={toggleSelection}
+          onClose={() => setDetail(null)}
+        />
+      )}
+
       {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
       {resultBet && resultBet.status !== 'pending' && (
         <ResultModal
@@ -428,10 +453,12 @@ function FeaturedFixture({
   fixture,
   selections,
   onPick,
+  onOpenDetail,
 }: {
   fixture: RawFixtureOdds
   selections: BetSelection[]
-  onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
+  onPick: (sel: BetSelection) => void
+  onOpenDetail: (f: RawFixtureOdds) => void
 }) {
   const teams = teamsFromLabel(fixture.label)
   const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
@@ -490,13 +517,12 @@ function FeaturedFixture({
           </div>
           <div className="flex gap-2">
             {fixture.options.map((opt) => {
-              const active = selections.some(
-                (s) => s.fixtureId === fixture.fixtureId && s.pick === opt.pick
-              )
+              const sel = toBetSelection(fixture, opt)
+              const active = selections.some((s) => selectionKey(s) === selectionKey(sel))
               return (
                 <button
                   key={opt.pick}
-                  onClick={() => onPick(fixture, opt)}
+                  onClick={() => onPick(sel)}
                   className={`flex min-w-[80px] flex-col items-center gap-1 rounded-lg border px-3 py-2.5 transition-colors ${
                     active
                       ? 'border-paper bg-paper text-ink shadow-sm'
@@ -509,6 +535,14 @@ function FeaturedFixture({
               )
             })}
           </div>
+          {fixture.sport && (
+            <button
+              onClick={() => onOpenDetail(fixture)}
+              className="text-right text-[11px] font-medium text-paper/70 underline-offset-2 hover:text-paper hover:underline"
+            >
+              Ver todos los mercados ›
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -543,17 +577,25 @@ function FixtureRow({
   fixture,
   selections,
   onPick,
+  onOpenDetail,
 }: {
   fixture: RawFixtureOdds
   selections: BetSelection[]
-  onPick: (f: RawFixtureOdds, o: RawFixtureOdds['options'][number]) => void
+  onPick: (sel: BetSelection) => void
+  onOpenDetail: (f: RawFixtureOdds) => void
 }) {
   const teams = teamsFromLabel(fixture.label)
   const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
   const kickoff = formatKickoff(fixture.kickoff)
   return (
     <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 px-2 py-3 transition-colors hover:bg-paper/50">
-      <div className="min-w-0">
+      <button
+        type="button"
+        onClick={() => onOpenDetail(fixture)}
+        disabled={!fixture.sport}
+        className="min-w-0 text-left disabled:cursor-default"
+        title={fixture.sport ? 'Ver todos los mercados' : undefined}
+      >
         {teams ? (
           <div className="space-y-1">
             <RowTeam name={teams[0]} />
@@ -568,17 +610,17 @@ function FixtureRow({
           {margin != null && (
             <span className="text-ochre"> · casa ~{(margin * 100).toFixed(1)}%</span>
           )}
+          {fixture.sport && <span className="text-slate"> · más mercados ›</span>}
         </p>
-      </div>
+      </button>
 
       {fixture.options.map((opt) => {
-        const active = selections.some(
-          (s) => s.fixtureId === fixture.fixtureId && s.pick === opt.pick
-        )
+        const sel = toBetSelection(fixture, opt)
+        const active = selections.some((s) => selectionKey(s) === selectionKey(sel))
         return (
           <button
             key={opt.pick}
-            onClick={() => onPick(fixture, opt)}
+            onClick={() => onPick(sel)}
             className={`flex h-full flex-col items-center justify-center rounded-lg border py-2 transition-colors ${
               active
                 ? 'border-slate bg-slate text-paper shadow-sm'

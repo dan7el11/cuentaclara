@@ -45,7 +45,7 @@ function Row({ bet }: { bet: Bet }) {
     <div className="flex items-start justify-between gap-4 px-4 py-3">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-ink">
-          {first ? localize(first.pick) : 'Apuesta'}
+          {first ? localize(first.selectionLabel) : 'Apuesta'}
           {extra > 0 && <span className="text-ink/50"> +{extra} más</span>}
         </p>
         <p className="figure mt-0.5 text-[11px] text-ink/50">

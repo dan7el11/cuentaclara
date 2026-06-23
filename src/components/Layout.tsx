@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { subscribeToWallet } from '../services/walletService'
 import { listenForegroundPush } from '../services/push'
+import { recordDailyActivity } from '../services/analyticsService'
 import type { Wallet } from '../types'
 import LedgerBar from './LedgerBar'
 import ThresholdIntervention from './ThresholdIntervention'
@@ -20,6 +21,11 @@ export default function Layout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return
     return subscribeToWallet(user.uid, setWallet)
+  }, [user])
+
+  // Registra actividad diaria (DAU + racha oculta para análisis de riesgo).
+  useEffect(() => {
+    if (user) recordDailyActivity(user.uid).catch(() => {})
   }, [user])
 
   // Muestra las push que llegan con la app abierta (FCM no las muestra solo).
