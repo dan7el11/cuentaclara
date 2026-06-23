@@ -18,8 +18,8 @@
   .ledger-rule {
     background-image: repeating-linear-gradient(
       to right,
-      theme('colors.paperline') 0,
-      theme('colors.paperline') 6px,
+      rgb(var(--c-paperline)) 0,
+      rgb(var(--c-paperline)) 6px,
       transparent 6px,
       transparent 12px
     );

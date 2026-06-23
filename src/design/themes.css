@@ -1,6 +1,32 @@
 /* Temas de muestra para /muestra — sobrescriben los tokens dentro de un
    contenedor. Sirven para comparar estilos sin cambiar la app real. */
 
+/* 0 — Claro original (la app era así antes del tema oscuro global) */
+.theme-light {
+  --color-ink: #1c2430;
+  --color-paper: #f3efe6;
+  --color-paperline: #e3dcc9;
+  --color-bg: #f3efe6;
+  --color-surface: #ffffff;
+  --color-surface-tinted: rgba(243, 239, 230, 0.5);
+  --color-border: #e3dcc9;
+  --color-text: #1c2430;
+  --color-text-muted: rgba(28, 36, 48, 0.6);
+  --color-text-subtle: rgba(28, 36, 48, 0.45);
+  --color-primary: #3d5a73;
+  --color-primary-dark: #2c4356;
+  --color-primary-bg: rgba(61, 90, 115, 0.1);
+  --color-primary-border: rgba(61, 90, 115, 0.25);
+  --color-paper: #f3efe6;
+  --color-danger: #7a2e2e;
+  --color-success: #5b6b4f;
+  --color-warning: #b98b3e;
+  --gradient-slate: linear-gradient(118deg, #2c4356 0%, #34506a 55%, #3d5a73 100%);
+  --shadow-card: 0 18px 50px -26px rgba(28, 36, 48, 0.45);
+  --radius-xl: 12px;
+  --ledger-rule-bg: repeating-linear-gradient(to right, #e3dcc9 0, #e3dcc9 6px, transparent 6px, transparent 12px);
+}
+
 /* 1 — Oscuro (sportsbook): índigo casi negro + violeta */
 .theme-dark {
   --color-bg: #0c0d17;

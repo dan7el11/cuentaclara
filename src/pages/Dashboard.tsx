@@ -104,7 +104,7 @@ export default function Dashboard() {
             </p>
           </div>
         ) : (
-          <div className="mt-5 rounded-xl border border-paperline bg-white p-6 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
+          <div className="mt-5 rounded-xl border border-paperline bg-surface p-6 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
             <p className="text-sm text-ink/70">
               Todavía no tenés una billetera ficticia. Creá una para empezar a simular con saldo
               ficticio (sin valor real).
@@ -139,15 +139,15 @@ export default function Dashboard() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
         {/* Columna izquierda: saldo + tarjeta */}
         <div className="space-y-6">
-          <div className="overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
+          <div className="overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
             <div
-              className="relative px-6 py-6 text-paper"
-              style={{ background: 'linear-gradient(118deg, #2C4356 0%, #34506A 55%, #3D5A73 100%)' }}
+              className="relative px-6 py-6 text-white"
+              style={{ background: 'var(--gradient-slate)' }}
             >
               <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-ochre/50" />
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-paper/55">Saldo ficticio</p>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-white/55">Saldo ficticio</p>
                   <p className="figure mt-1 text-4xl font-semibold">{money(wallet.balance)}</p>
                 </div>
                 <Button variant="dark" size="sm" onClick={() => setDepositOpen(true)}>
@@ -168,7 +168,7 @@ export default function Dashboard() {
         </div>
 
         {/* Columna derecha: extracto + costo de oportunidad */}
-        <div className="overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
+        <div className="overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
           <div className="border-b border-paperline px-6 py-4">
             <h2 className="font-serif text-lg text-ink">Extracto resumido</h2>
           </div>
@@ -181,7 +181,7 @@ export default function Dashboard() {
 
           <div className="m-6 mt-2 rounded-lg border border-sage/30 bg-sage/5 p-5">
             <div className="flex items-center gap-2">
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-sage text-[11px] font-bold text-paper">↗</span>
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-sage text-[11px] font-bold text-white">↗</span>
               <h3 className="text-sm font-medium text-ink">Si ese dinero hubiera ido a un fondo indexado</h3>
             </div>
             <p className="figure mt-3 text-3xl font-semibold text-sage">
@@ -195,7 +195,7 @@ export default function Dashboard() {
         </div>
 
         {/* Actividad reciente */}
-        <div className="overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
+        <div className="overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
           <div className="border-b border-paperline px-6 py-4">
             <h2 className="font-serif text-lg text-ink">Actividad reciente</h2>
           </div>
@@ -225,7 +225,7 @@ export default function Dashboard() {
         </div>
 
         {/* Notificaciones */}
-        <div className="rounded-xl border border-paperline bg-white p-5 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
+        <div className="rounded-xl border border-paperline bg-surface p-5 shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)] lg:col-span-2">
           <h3 className="text-sm font-medium text-ink">Notificaciones</h3>
           <p className="mt-1 text-xs text-ink/60">
             Te avisamos en cuanto se resuelva una apuesta: si ganaste o perdiste, con la app cerrada.
@@ -265,7 +265,7 @@ export default function Dashboard() {
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-wide text-paper/55">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide text-white/55">{label}</span>
       <span className="figure text-base">{value}</span>
     </div>
   )

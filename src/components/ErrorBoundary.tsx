@@ -27,7 +27,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-paper p-6">
-          <div className="w-full max-w-md rounded-xl border border-paperline bg-white p-6 shadow-sm">
+          <div className="w-full max-w-md rounded-xl border border-paperline bg-surface p-6 shadow-sm">
             <h1 className="font-serif text-xl text-ink">Algo se rompió en la pantalla</h1>
             <p className="mt-2 text-sm text-ink/70">
               Ocurrió un error al mostrar esta vista. Probá recargar la página.

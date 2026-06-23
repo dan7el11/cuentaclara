@@ -3,15 +3,20 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      // Los colores apuntan a variables CSS (canales RGB) para que el tema
+      // global se controle desde src/design/tokens.css y se pueda cambiar
+      // sin tocar componentes. El sufijo <alpha-value> mantiene el soporte
+      // de los modificadores de opacidad (p.ej. text-ink/50).
       colors: {
-        ink: '#1C2430',      // texto principal, casi negro azulado
-        paper: '#F3EFE6',    // fondo cálido tipo papel de extracto bancario
-        paperline: '#E3DCC9',// líneas/divisores sobre el papel
-        slate: '#3D5A73',    // acción primaria, sobrio (no "casino")
-        slatedark: '#2C4356',
-        ochre: '#B98B3E',    // advertencia/atención, no rojo de alarma de casino
-        burgundy: '#7A2E2E', // único color reservado para alertas serias de deuda
-        sage: '#5B6B4F',     // ganancias moderadas, deliberadamente no "verde casino"
+        ink: 'rgb(var(--c-ink) / <alpha-value>)',
+        paper: 'rgb(var(--c-paper) / <alpha-value>)',
+        paperline: 'rgb(var(--c-paperline) / <alpha-value>)',
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        slate: 'rgb(var(--c-slate) / <alpha-value>)',
+        slatedark: 'rgb(var(--c-slatedark) / <alpha-value>)',
+        ochre: 'rgb(var(--c-ochre) / <alpha-value>)',
+        burgundy: 'rgb(var(--c-burgundy) / <alpha-value>)',
+        sage: 'rgb(var(--c-sage) / <alpha-value>)',
       },
       fontFamily: {
         serif: ['"Source Serif 4"', 'Georgia', 'serif'],

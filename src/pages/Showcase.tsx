@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Badge, Card, OddsButton, Input, LedgerRule, Tab } from '../components/ui'
 
 const THEMES = [
-  { id: '', name: 'Actual (sobrio)', note: 'Lo que se ve hoy. Paleta papel cálido + slate.' },
+  { id: 'theme-light', name: 'Claro original', note: 'El look previo: papel cálido + slate.' },
   { id: 'theme-warm', name: 'Cálido refrescado', note: 'Mismo papel, acento teal, esquinas más redondeadas.' },
   { id: 'theme-fintech', name: 'Fintech moderno', note: 'Claro, azul brillante, aireado.' },
   { id: 'theme-dark', name: 'Oscuro (sportsbook)', note: 'Índigo casi negro + violeta.' },
