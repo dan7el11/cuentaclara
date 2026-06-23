@@ -222,7 +222,8 @@ export function displayTeam(team: string): string {
  * o "pick" del boleto), p. ej. "Spain gana" -> "España gana". Reemplaza cada
  * nombre conocido por su versión en español.
  */
-export function localize(text: string): string {
+export function localize(text: string | undefined | null): string {
+  if (!text) return ''
   let out = text
   for (const [en, es] of Object.entries(TEAM_ES)) {
     out = out.replace(new RegExp(`\\b${en}\\b`, 'g'), es)

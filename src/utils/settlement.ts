@@ -55,9 +55,11 @@ export function settleSelection(
 
 export interface SettleableLeg {
   fixtureId: string
-  marketKey: string
-  selectionCode: string
+  marketKey?: string
+  selectionCode?: string
   point?: number
+  // Compatibilidad con apuestas guardadas con el modelo anterior (1X2).
+  outcomeCode?: string
 }
 
 /**
@@ -75,7 +77,9 @@ export function settleBet(
   for (const leg of legs) {
     const s = scoresByFixture.get(leg.fixtureId)
     if (!s) return null
-    results.push(settleSelection(leg.marketKey, leg.selectionCode, leg.point, s.homeScore, s.awayScore))
+    const marketKey = leg.marketKey ?? 'h2h' // apuestas viejas eran 1X2
+    const code = leg.selectionCode ?? leg.outcomeCode ?? ''
+    results.push(settleSelection(marketKey, code, leg.point, s.homeScore, s.awayScore))
   }
   if (results.length === 0) return null
   if (results.some((r) => r === 'lost')) return 'lost'

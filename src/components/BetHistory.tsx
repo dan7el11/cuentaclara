@@ -39,13 +39,15 @@ export default function BetHistory({ bets }: { bets: Bet[] }) {
 
 function Row({ bet }: { bet: Bet }) {
   const net = netOf(bet)
-  const first = bet.selections[0]
+  const first = bet.selections[0] as (typeof bet.selections)[number] & { pick?: string }
   const extra = bet.selections.length - 1
+  // Compatibilidad con apuestas viejas (modelo anterior usaba `pick`).
+  const label = first ? first.selectionLabel ?? first.pick ?? 'Apuesta' : 'Apuesta'
   return (
     <div className="flex items-start justify-between gap-4 px-4 py-3">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-ink">
-          {first ? localize(first.selectionLabel) : 'Apuesta'}
+          {localize(label)}
           {extra > 0 && <span className="text-ink/50"> +{extra} más</span>}
         </p>
         <p className="figure mt-0.5 text-[11px] text-ink/50">
