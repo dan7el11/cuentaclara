@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { historicalHitRateInBucket } from '../utils/financialMath'
+import { Button } from './ui'
 import type { Bet } from '../types'
 
 interface Props {
@@ -51,18 +52,10 @@ export default function PreBetCheck({
         </dl>
 
         <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="rounded px-4 py-2 text-sm text-ink/70 hover:bg-paperline/50"
-          >
+          <Button variant="ghost" onClick={onCancel}>
             Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            className="rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark"
-          >
-            Confirmar apuesta ficticia
-          </button>
+          </Button>
+          <Button onClick={onConfirm}>Confirmar apuesta ficticia</Button>
         </div>
       </div>
     </div>

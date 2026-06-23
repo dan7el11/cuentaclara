@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Button } from './ui'
 
 interface Props {
   balance: number
@@ -49,13 +50,14 @@ export default function ThresholdIntervention({ balance, onAcknowledge }: Props)
           <Link to="/apoyo" className="text-sm text-slate underline hover:text-slatedark">
             Ver recursos de apoyo ahora
           </Link>
-          <button
+          <Button
+            variant="primary"
             disabled={!acknowledged}
             onClick={onAcknowledge}
-            className="rounded bg-ink px-4 py-2 text-sm text-paper disabled:opacity-40"
+            style={{ background: 'var(--color-ink)', borderColor: 'var(--color-ink)' }}
           >
             Continuar
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
   expectedLossFromWagering,
   futureValueOfContributions,
 } from '../utils/financialMath'
+import { Card, Badge } from '../components/ui'
 import type { Bet } from '../types'
 
 const HORIZONS = [1, 5, 10, 20]
@@ -48,8 +49,8 @@ export default function Educacion() {
             Los mismos números, mirados como inversión en vez de como apuesta.
           </p>
         </div>
-        <span className="figure mb-1 hidden rounded-full border border-paperline px-3 py-1 text-[11px] tracking-wide text-ink/55 sm:inline">
-          dinero ficticio
+        <span className="mb-1 hidden sm:inline">
+          <Badge variant="ficticia">dinero ficticio</Badge>
         </span>
       </div>
       <div className="ledger-rule mt-4" />
@@ -198,12 +199,9 @@ export default function Educacion() {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
-      <div className="border-b border-paperline px-6 py-4">
-        <h2 className="font-serif text-lg text-ink">{title}</h2>
-      </div>
-      <div className="p-6">{children}</div>
-    </section>
+    <div className="mt-6">
+      <Card header={title}>{children}</Card>
+    </div>
   )
 }
 
