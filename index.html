@@ -12,6 +12,14 @@
     />
   </head>
   <body class="bg-paper text-ink font-sans">
+    <script>
+      // Aplica el tema guardado antes de pintar, para evitar parpadeo.
+      try {
+        if (localStorage.getItem('cc-theme') === 'light') {
+          document.documentElement.classList.add('theme-light')
+        }
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

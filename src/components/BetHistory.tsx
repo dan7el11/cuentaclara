@@ -14,7 +14,7 @@ export default function BetHistory({ bets }: { bets: Bet[] }) {
   const staked = bets.reduce((acc, b) => acc + b.stake, 0)
 
   return (
-    <section className="mt-8 overflow-hidden rounded-lg border border-paperline bg-white shadow-sm">
+    <section className="mt-8 overflow-hidden rounded-lg border border-paperline bg-surface shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-paperline bg-paper/60 px-4 py-3">
         <h2 className="font-serif text-base text-ink">Tu historial</h2>
         <div className="flex flex-wrap gap-5 text-sm">

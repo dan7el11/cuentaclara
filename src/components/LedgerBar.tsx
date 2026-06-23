@@ -21,7 +21,7 @@ export default function LedgerBar({ wallet }: Props) {
   const netResult = wallet.totalWon - wallet.totalLost
 
   return (
-    <div className="bg-ink text-paper px-4 py-2 text-sm">
+    <div className="bg-black text-white px-4 py-2 text-sm">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
         <Stat label="Saldo ficticio" value={formatMoney(wallet.balance)} alert={isNegative} />
         <Stat label="Apostado en total" value={formatMoney(wallet.totalStaked)} />
@@ -30,7 +30,7 @@ export default function LedgerBar({ wallet }: Props) {
           value={netResult < 0 ? `−${formatMoney(Math.abs(netResult))}` : `+${formatMoney(netResult)}`}
           alert={netResult < 0}
         />
-        <span className="flex items-center gap-2 rounded-full border border-paperline/40 px-3 py-1 text-[11px] tracking-wide text-paper/70">
+        <span className="flex items-center gap-2 rounded-full border border-paperline/40 px-3 py-1 text-[11px] tracking-wide text-white/70">
           <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
           Modo simulador
         </span>
@@ -42,8 +42,8 @@ export default function LedgerBar({ wallet }: Props) {
 function Stat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-wide text-paper/60">{label}</span>
-      <span className={`figure text-base ${alert ? 'text-ochre' : 'text-paper'}`}>{value}</span>
+      <span className="text-[11px] uppercase tracking-wide text-white/60">{label}</span>
+      <span className={`figure text-base ${alert ? 'text-ochre' : 'text-white'}`}>{value}</span>
     </div>
   )
 }

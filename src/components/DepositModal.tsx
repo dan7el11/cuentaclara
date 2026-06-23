@@ -35,7 +35,7 @@ export default function DepositModal({ currentBalance, onClose, onConfirm }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-sm overflow-hidden rounded-xl border border-paperline bg-paper shadow-xl">
         <div className="border-b border-paperline px-6 py-4">
           <h2 className="font-serif text-lg text-ink">Recargar saldo ficticio</h2>
@@ -66,7 +66,7 @@ export default function DepositModal({ currentBalance, onClose, onConfirm }: Pro
               min={1}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              className="figure mt-1 w-full rounded border border-paperline bg-white px-3 py-2 text-right"
+              className="figure mt-1 w-full rounded border border-paperline bg-surface px-3 py-2 text-right"
             />
           </label>
 

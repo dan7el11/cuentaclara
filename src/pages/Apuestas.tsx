@@ -167,7 +167,7 @@ export default function Apuestas() {
       <div className="ledger-rule mt-4" />
 
       {/* ===== TABLERO UNIFICADO (C6: una sola superficie, sin recuadros flotantes) ===== */}
-      <div className="mt-5 overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
+      <div className="mt-5 overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
         {/* Barra de ligas desplegable, con símbolos (C3 / C7) */}
         <div className="flex items-center gap-2 overflow-x-auto border-b border-paperline bg-paper/50 px-4 py-3">
           <span className="mr-2 flex flex-none items-center gap-2 border-r border-paperline pr-3 text-sm font-semibold text-ink">
@@ -188,7 +188,7 @@ export default function Apuestas() {
               >
                 <span
                   className={`grid h-6 w-6 flex-none place-items-center rounded-md text-[10px] font-bold ${
-                    active ? 'bg-slate text-paper' : 'bg-paperline text-ink'
+                    active ? 'bg-slate text-white' : 'bg-paperline text-ink'
                   }`}
                 >
                   {lg.code}
@@ -346,12 +346,12 @@ export default function Apuestas() {
                 <button
                   onClick={() => setSlipOpen(true)}
                   title="Abrir boleto"
-                  className="grid h-9 w-9 place-items-center rounded-md border border-paperline bg-white text-ink hover:border-slate"
+                  className="grid h-9 w-9 place-items-center rounded-md border border-paperline bg-surface text-ink hover:border-slate"
                 >
                   ‹
                 </button>
                 {selections.length > 0 && (
-                  <span className="figure grid h-6 min-w-6 place-items-center rounded-full bg-slate px-1.5 text-xs font-bold text-paper">
+                  <span className="figure grid h-6 min-w-6 place-items-center rounded-full bg-slate px-1.5 text-xs font-bold text-white">
                     {selections.length}
                   </span>
                 )}
@@ -390,7 +390,7 @@ export default function Apuestas() {
       )}
 
       {resultBet && resultBet.status === 'pending' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-sm rounded-lg bg-paper p-6 text-center">
             {isMockBet(resultBet) ? (
               <>
@@ -402,13 +402,13 @@ export default function Apuestas() {
                 <div className="mt-4 flex justify-center gap-3">
                   <button
                     onClick={() => demoResolve(true)}
-                    className="rounded bg-sage px-3 py-1.5 text-sm text-paper"
+                    className="rounded bg-sage px-3 py-1.5 text-sm text-white"
                   >
                     Simular que ganó
                   </button>
                   <button
                     onClick={() => demoResolve(false)}
-                    className="rounded bg-burgundy px-3 py-1.5 text-sm text-paper"
+                    className="rounded bg-burgundy px-3 py-1.5 text-sm text-white"
                   >
                     Simular que perdió
                   </button>
@@ -423,7 +423,7 @@ export default function Apuestas() {
                 </p>
                 <button
                   onClick={() => setResultBet(null)}
-                  className="mt-4 rounded bg-slate px-4 py-2 text-sm text-paper hover:bg-slatedark"
+                  className="mt-4 rounded bg-slate px-4 py-2 text-sm text-white hover:bg-slatedark"
                 >
                   Entendido
                 </button>
@@ -463,11 +463,8 @@ function FeaturedFixture({
   const kickoff = formatKickoff(fixture.kickoff)
   return (
     <div
-      className="relative overflow-hidden border-b border-paperline px-6 py-5 text-paper"
-      style={{
-        background:
-          'linear-gradient(118deg, #2C4356 0%, #34506A 55%, #3D5A73 100%)',
-      }}
+      className="relative overflow-hidden border-b border-paperline px-6 py-5 text-white"
+      style={{ background: 'var(--gradient-slate)' }}
     >
       {/* textura de talonario, sutil */}
       <div
@@ -483,18 +480,18 @@ function FeaturedFixture({
       <div className="relative flex flex-wrap items-center justify-between gap-5">
         <div className="min-w-[260px] flex-1">
           <div className="mb-4 flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-paper">
+            <span className="flex items-center gap-1.5 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
               <span className="h-1.5 w-1.5 rounded-full bg-paper" />
               DESTACADO
             </span>
-            <span className="text-xs font-medium uppercase tracking-[0.1em] text-paper/55">
+            <span className="text-xs font-medium uppercase tracking-[0.1em] text-white/55">
               {kickoff ?? 'Partido destacado'}
             </span>
           </div>
           {teams ? (
             <div className="flex items-center gap-3 font-serif text-2xl">
               <TeamName name={teams[0]} />
-              <span className="text-paper/40">vs</span>
+              <span className="text-white/40">vs</span>
               <TeamName name={teams[1]} />
             </div>
           ) : (
@@ -504,7 +501,7 @@ function FeaturedFixture({
 
         <div className="flex flex-col gap-2">
           <div className="text-right">
-            <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-paper/55">
+            <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-white/55">
               {fixture.market}
             </span>
             {margin != null && (
@@ -533,7 +530,7 @@ function FeaturedFixture({
           {fixture.sport && (
             <button
               onClick={() => onOpenDetail(fixture)}
-              className="text-right text-[11px] font-medium text-paper/70 underline-offset-2 hover:text-paper hover:underline"
+              className="text-right text-[11px] font-medium text-white/70 underline-offset-2 hover:text-white hover:underline"
             >
               Ver todos los mercados ›
             </button>
@@ -552,7 +549,7 @@ function TeamName({ name }: { name: string }) {
         <img
           src={flag}
           alt=""
-          className="h-[21px] w-[30px] rounded-sm object-cover ring-1 ring-paper/20"
+          className="h-[21px] w-[30px] rounded-sm object-cover ring-1 ring-white/20"
         />
       ) : (
         <span className="grid h-[21px] w-[30px] place-items-center rounded-sm bg-white/10 text-[10px]">
@@ -618,7 +615,7 @@ function FixtureRow({
             onClick={() => onPick(sel)}
             className={`flex h-full flex-col items-center justify-center rounded-lg border py-2 transition-colors ${
               active
-                ? 'border-slate bg-slate text-paper shadow-sm'
+                ? 'border-slate bg-slate text-white shadow-sm'
                 : 'border-paperline text-ink hover:border-slate hover:bg-paper/60'
             }`}
           >

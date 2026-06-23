@@ -169,7 +169,7 @@ function Choice({ active, onClick, children }: { active: boolean; onClick: () =>
     <button
       onClick={onClick}
       className={`rounded-full border px-5 py-1.5 text-sm font-medium transition-colors ${
-        active ? 'border-slate bg-slate text-paper' : 'border-paperline text-ink/60 hover:border-slate/40'
+        active ? 'border-slate bg-slate text-white' : 'border-paperline text-ink/60 hover:border-slate/40'
       }`}
     >
       {children}
@@ -209,7 +209,7 @@ function Resource({ name, href, children }: { name: string; href: string; childr
 
 function Card({ icon, title, children }: { icon: string; title: string; children: ReactNode }) {
   return (
-    <section className="mt-5 overflow-hidden rounded-xl border border-paperline bg-white shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
+    <section className="mt-5 overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
       <div className="flex items-center gap-3 border-b border-paperline px-6 py-4">
         <span className="grid h-7 w-7 flex-none place-items-center rounded-md bg-slate/10 font-serif text-sm text-slate">
           {icon}

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { subscribeToWallet } from '../services/walletService'
 import { listenForegroundPush } from '../services/push'
 import { recordDailyActivity } from '../services/analyticsService'
@@ -15,6 +16,7 @@ import ThresholdIntervention from './ThresholdIntervention'
  */
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
+  const { theme, toggle } = useTheme()
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [thresholdAcknowledgedFor, setThresholdAcknowledgedFor] = useState<number | null>(null)
 
@@ -54,11 +56,21 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Tab to="/educacion">Educación financiera</Tab>
               <Tab to="/apoyo">Apoyo</Tab>
             </div>
-            {user && (
-              <button onClick={logout} className="text-sm text-ink/60 hover:text-ink">
-                Salir
+            <div className="flex items-center gap-4">
+              <button
+                onClick={toggle}
+                title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+                aria-label="Cambiar tema"
+                className="grid h-8 w-8 place-items-center rounded-md border border-paperline text-ink/70 transition-colors hover:text-ink"
+              >
+                {theme === 'dark' ? '☀' : '☾'}
               </button>
-            )}
+              {user && (
+                <button onClick={logout} className="text-sm text-ink/60 hover:text-ink">
+                  Salir
+                </button>
+              )}
+            </div>
           </nav>
         </header>
       </div>

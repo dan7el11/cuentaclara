@@ -34,7 +34,7 @@ export default function PreBetCheck({
   const { sampleSize, hitRate } = historicalHitRateInBucket(validBets, combinedOdds)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-lg border border-paperline bg-paper p-6">
         <h2 className="font-serif text-lg text-ink">Antes de confirmar</h2>
         <div className="ledger-rule my-3" />

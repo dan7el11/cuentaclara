@@ -7,11 +7,17 @@ import Dashboard from './pages/Dashboard'
 import Apuestas from './pages/Apuestas'
 import Educacion from './pages/Educacion'
 import Apoyo from './pages/Apoyo'
+import Showcase from './pages/Showcase'
 
 export default function App() {
   const { user, loading } = useAuth()
 
   if (loading) return <p className="p-8 text-ink/60">Cargando…</p>
+
+  // Ruta pública de muestra de estilos — accesible con o sin sesión.
+  if (window.location.pathname === '/muestra' || window.location.hash === '#/muestra') {
+    return <Showcase />
+  }
 
   if (!user) {
     return (

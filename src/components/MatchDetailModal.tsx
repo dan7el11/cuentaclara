@@ -38,19 +38,19 @@ export default function MatchDetailModal({ fixtureId, sport, selections, onPick,
   const teams = detail ? teamsFromLabel(detail.label) : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4">
       <div className="my-8 w-full max-w-2xl overflow-hidden rounded-xl border border-paperline bg-paper shadow-xl">
         {/* Cabecera */}
         <div
-          className="relative px-6 py-5 text-paper"
-          style={{ background: 'linear-gradient(118deg, #2C4356 0%, #34506A 55%, #3D5A73 100%)' }}
+          className="relative px-6 py-5 text-white"
+          style={{ background: 'var(--gradient-slate)' }}
         >
           <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-ochre/50" />
           <div className="flex items-start justify-between gap-4">
             <div className="font-serif text-xl">
               {teams ? (
                 <span className="flex flex-wrap items-center gap-2">
-                  <Team name={teams[0]} /> <span className="text-paper/40">vs</span>{' '}
+                  <Team name={teams[0]} /> <span className="text-white/40">vs</span>{' '}
                   <Team name={teams[1]} />
                 </span>
               ) : (
@@ -59,7 +59,7 @@ export default function MatchDetailModal({ fixtureId, sport, selections, onPick,
             </div>
             <button
               onClick={onClose}
-              className="grid h-8 w-8 flex-none place-items-center rounded-md border border-paper/30 text-paper hover:bg-white/10"
+              className="grid h-8 w-8 flex-none place-items-center rounded-md border border-white/30 text-white hover:bg-white/10"
               title="Cerrar"
             >
               ✕
@@ -141,8 +141,8 @@ function Market({
               onClick={() => onPick(bet)}
               className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                 active
-                  ? 'border-slate bg-slate text-paper shadow-sm'
-                  : 'border-paperline bg-white text-ink hover:border-slate'
+                  ? 'border-slate bg-slate text-white shadow-sm'
+                  : 'border-paperline bg-surface text-ink hover:border-slate'
               }`}
             >
               <span className="min-w-0 truncate text-sm">{sel.label}</span>
@@ -162,7 +162,7 @@ function Team({ name }: { name: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       {flag ? (
-        <img src={flag} alt="" className="h-[18px] w-[26px] rounded-sm object-cover ring-1 ring-paper/20" />
+        <img src={flag} alt="" className="h-[18px] w-[26px] rounded-sm object-cover ring-1 ring-white/20" />
       ) : null}
       {displayTeam(name)}
     </span>

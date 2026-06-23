@@ -17,7 +17,7 @@ export default function ThresholdIntervention({ balance, onAcknowledge }: Props)
   const [acknowledged, setAcknowledged] = useState(false)
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/80 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-lg rounded-lg border-2 border-burgundy bg-paper p-6">
         <h2 className="font-serif text-xl text-burgundy">
           Tu cuenta ficticia superó el límite que vos mismo definiste
