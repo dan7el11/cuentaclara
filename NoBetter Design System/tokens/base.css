@@ -1,0 +1,41 @@
+/* NoBetter Base — Minimal resets and global utility classes */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Financial numbers: always monospaced + tabular alignment.
+   Apply to any monetary figure, odds, or percentage.        */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ledger rule: dashed horizontal line, the brand's signature
+   section divider. Usage: <div class="ledger-rule"></div>   */
+.ledger-rule {
+  height: 1px;
+  background-image: var(--ledger-rule-bg);
+}
+
+/* Screen-reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}

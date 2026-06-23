@@ -1,0 +1,57 @@
+/* NoBetter Color Tokens
+   Palette from CuentaClara's Tailwind config.
+   Deliberately anti-casino: muted, warm, accountant-office palette.
+   Every color has a named purpose — never reach outside this set.
+*/
+:root {
+  /* ── Raw Palette ─────────────────────────────────────── */
+  --color-ink:         #1C2430;   /* near-black blue   — primary text         */
+  --color-paper:       #F3EFE6;   /* warm off-white    — main background       */
+  --color-paperline:   #E3DCC9;   /* warm beige        — dividers & borders    */
+  --color-slate:       #3D5A73;   /* steel blue        — primary action        */
+  --color-slate-dark:  #2C4356;   /* darker slate      — hover, gradient start */
+  --color-slate-mid:   #34506A;   /* mid slate         — gradient midpoint     */
+  --color-ochre:       #B98B3E;   /* muted gold        — warnings, not alarms  */
+  --color-burgundy:    #7A2E2E;   /* deep red          — debt alerts only      */
+  --color-sage:        #5B6B4F;   /* muted green       — gains, positives      */
+  --color-white:       #FFFFFF;
+
+  /* ── Ink opacity ramps (text hierarchy) ─────────────── */
+  --color-ink-70:  rgba(28, 36, 48, 0.70);
+  --color-ink-60:  rgba(28, 36, 48, 0.60);
+  --color-ink-55:  rgba(28, 36, 48, 0.55);
+  --color-ink-50:  rgba(28, 36, 48, 0.50);
+  --color-ink-45:  rgba(28, 36, 48, 0.45);
+  --color-ink-30:  rgba(28, 36, 48, 0.30);
+
+  /* ── Semantic aliases ────────────────────────────────── */
+  --color-bg:              var(--color-paper);
+  --color-surface:         var(--color-white);
+  --color-surface-tinted:  rgba(243, 239, 230, 0.50);
+  --color-border:          var(--color-paperline);
+
+  --color-text:            var(--color-ink);
+  --color-text-muted:      var(--color-ink-60);
+  --color-text-subtle:     var(--color-ink-45);
+
+  --color-primary:         var(--color-slate);
+  --color-primary-dark:    var(--color-slate-dark);
+  --color-primary-bg:      rgba(61, 90, 115, 0.10);
+  --color-primary-border:  rgba(61, 90, 115, 0.25);
+
+  --color-warning:         var(--color-ochre);
+  --color-warning-bg:      rgba(185, 139, 62, 0.10);
+  --color-warning-border:  rgba(185, 139, 62, 0.30);
+
+  --color-danger:          var(--color-burgundy);
+  --color-danger-bg:       rgba(122, 46, 46, 0.05);
+  --color-danger-border:   rgba(122, 46, 46, 0.30);
+
+  --color-success:         var(--color-sage);
+  --color-success-bg:      rgba(91, 107, 79, 0.05);
+  --color-success-border:  rgba(91, 107, 79, 0.30);
+
+  /* ── Gradients ───────────────────────────────────────── */
+  --gradient-slate: linear-gradient(118deg, #2C4356 0%, #34506A 55%, #3D5A73 100%); /* @kind color */
+  --gradient-paper: linear-gradient(180deg, var(--color-paper) 0%, var(--color-white) 100%);
+}

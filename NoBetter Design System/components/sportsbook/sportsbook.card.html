@@ -1,0 +1,64 @@
+<!-- @dsCard group="Sportsbook" viewport="700x300" name="Sportsbook Components" subtitle="SbButton · SbOddsTile · SbBadge — dark theme" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>
+  html,body { margin:0; background:#0C0D17; }
+  body { padding:18px 20px; }
+  .label { font-family:var(--font-mono); font-size:10px; color:#7B7E9C; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 8px; }
+  .sec { margin-bottom:16px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+</style>
+</head>
+<body class="sb-theme">
+<div id="root"></div>
+<script type="text/babel">
+const { SbButton, SbOddsTile, SbBadge } = window.NoBetterDesignSystem_40bf4b;
+function Demo() {
+  const [p, setP] = React.useState('1');
+  return (
+    <div>
+      <div className="sec">
+        <p className="label">SbButton</p>
+        <div className="row">
+          <SbButton glow>Apostar $10 (ficticio)</SbButton>
+          <SbButton variant="secondary">Depositar</SbButton>
+          <SbButton variant="success">Retirar</SbButton>
+          <SbButton variant="outline" size="sm">+ mercados</SbButton>
+          <SbButton variant="ghost" size="sm">Cancelar</SbButton>
+        </div>
+      </div>
+      <div className="sec">
+        <p className="label">SbOddsTile — movimiento de cuota</p>
+        <div className="row">
+          <SbOddsTile label="1" odds={2.35} move="up" active={p==='1'} onClick={()=>setP('1')} />
+          <SbOddsTile label="X" odds={3.10} active={p==='X'} onClick={()=>setP('X')} />
+          <SbOddsTile label="2" odds={2.95} move="down" active={p==='2'} onClick={()=>setP('2')} />
+          <SbOddsTile label="Más 2.5" odds={1.85} active={p==='o'} onClick={()=>setP('o')} />
+          <SbOddsTile label="Menos 2.5" odds={1.95} active={p==='u'} onClick={()=>setP('u')} />
+        </div>
+      </div>
+      <div className="sec">
+        <p className="label">SbBadge</p>
+        <div className="row">
+          <SbBadge variant="live" live>En vivo 67'</SbBadge>
+          <SbBadge variant="accent">+142 mercados</SbBadge>
+          <SbBadge variant="truth">Margen casa 6.8%</SbBadge>
+          <SbBadge variant="ficticia">Saldo ficticio</SbBadge>
+          <SbBadge variant="cash">Cobrado</SbBadge>
+          <SbBadge>Destacado</SbBadge>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>
+</body>
+</html>
