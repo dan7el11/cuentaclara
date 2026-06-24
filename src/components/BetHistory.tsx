@@ -6,7 +6,15 @@ import { localize } from '../utils/flag'
  * la pérdida acumulada deje de ser abstracta: acá se ve, apuesta por apuesta
  * y en total, cuánto se llevó la cuenta.
  */
-export default function BetHistory({ bets }: { bets: Bet[] }) {
+export default function BetHistory({
+  bets,
+  title = 'Tu historial',
+  flush = false,
+}: {
+  bets: Bet[]
+  title?: string
+  flush?: boolean
+}) {
   if (bets.length === 0) return null
 
   const resolved = bets.filter((b) => b.status === 'won' || b.status === 'lost')
@@ -14,9 +22,11 @@ export default function BetHistory({ bets }: { bets: Bet[] }) {
   const staked = bets.reduce((acc, b) => acc + b.stake, 0)
 
   return (
-    <section className="mt-8 overflow-hidden rounded-lg border border-paperline bg-surface shadow-sm">
+    <section
+      className={`${flush ? '' : 'mt-8'} overflow-hidden rounded-lg border border-paperline bg-surface shadow-sm`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-paperline bg-paper/60 px-4 py-3">
-        <h2 className="font-serif text-base text-ink">Tu historial</h2>
+        <h2 className="font-serif text-base text-ink">{title}</h2>
         <div className="flex flex-wrap gap-5 text-sm">
           <Summary label="Apostado" value={money(staked)} />
           <Summary
