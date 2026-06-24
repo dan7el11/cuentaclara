@@ -64,6 +64,65 @@ export function impliedProbability(decimalOdds: number): number {
 }
 
 /**
+ * Valor esperado (promedio) de una apuesta dado el margen de la casa.
+ * Es negativo: por cada vez que hacés esta apuesta, en promedio perdés
+ * `stake * margin`. No depende de si esta vez ganaste o perdiste.
+ */
+export function expectedValueOfBet(stake: number, margin = 0.07): number {
+  return -Math.round(stake * margin * 100) / 100
+}
+
+export interface UserBetStats {
+  resolved: number
+  wins: number
+  losses: number
+  hitRate: number | null
+  totalStaked: number
+  totalReturned: number
+  net: number
+  streak: { type: 'won' | 'lost'; length: number } | null
+}
+
+/**
+ * Resumen del desempeño real del usuario a partir de sus apuestas resueltas.
+ * `bets` debe venir ordenado por fecha (cualquier orden: el streak se calcula
+ * sobre las resueltas más recientes).
+ */
+export function summarizeUserBets(
+  bets: { stake: number; potentialPayout: number; status: string; placedAt: number }[]
+): UserBetStats {
+  const resolved = bets
+    .filter((b) => b.status === 'won' || b.status === 'lost')
+    .sort((a, b) => b.placedAt - a.placedAt)
+  const wins = resolved.filter((b) => b.status === 'won').length
+  const losses = resolved.filter((b) => b.status === 'lost').length
+  const totalStaked = resolved.reduce((acc, b) => acc + b.stake, 0)
+  const totalReturned = resolved.reduce((acc, b) => acc + (b.status === 'won' ? b.potentialPayout : 0), 0)
+
+  let streak: UserBetStats['streak'] = null
+  if (resolved.length > 0) {
+    const type = resolved[0].status as 'won' | 'lost'
+    let length = 0
+    for (const b of resolved) {
+      if (b.status === type) length++
+      else break
+    }
+    streak = { type, length }
+  }
+
+  return {
+    resolved: resolved.length,
+    wins,
+    losses,
+    hitRate: resolved.length > 0 ? wins / resolved.length : null,
+    totalStaked,
+    totalReturned,
+    net: Math.round((totalReturned - totalStaked) * 100) / 100,
+    streak,
+  }
+}
+
+/**
  * Probabilidad de que SE REPITA una racha de n aciertos consecutivos,
  * asumiendo independencia y la probabilidad implícita de cada apuesta.
  * Este es el número que se le muestra al usuario que "viene ganando".

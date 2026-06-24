@@ -9,7 +9,7 @@ import {
 import { placeBet, getBetHistory, resolveBet, resolvePendingBets } from '../services/walletService'
 import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
 import type { Bet, BetSelection } from '../types'
-import ResultModal from '../components/ResultModal'
+import PostBetAnalysis from '../components/PostBetAnalysis'
 import BetHistory from '../components/BetHistory'
 import MatchDetailModal from '../components/MatchDetailModal'
 import { Button, OddsButton, Badge } from '../components/ui'
@@ -355,13 +355,7 @@ export default function Apuestas() {
 
       {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
       {resultBet && resultBet.status !== 'pending' && (
-        <ResultModal
-          bet={resultBet}
-          totalLostSoFar={pastBets
-            .filter((b) => b.status === 'lost')
-            .reduce((acc, b) => acc + b.stake, 0)}
-          onClose={() => setResultBet(null)}
-        />
+        <PostBetAnalysis bet={resultBet} pastBets={pastBets} onClose={() => setResultBet(null)} />
       )}
 
       {resultBet && resultBet.status === 'pending' && (
