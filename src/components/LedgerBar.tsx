@@ -22,7 +22,7 @@ export default function LedgerBar({ wallet }: Props) {
 
   return (
     <div className="bg-black text-white px-4 py-2 text-sm">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 lg:px-2">
         <Stat label="Saldo ficticio" value={formatMoney(wallet.balance)} alert={isNegative} />
         <Stat label="Apostado en total" value={formatMoney(wallet.totalStaked)} />
         <Stat
