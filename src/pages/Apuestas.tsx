@@ -6,11 +6,19 @@ import {
   selectionKey,
   type RawFixtureOdds,
 } from '../services/oddsApi'
-import { placeBet, getBetHistory, resolveBet, resolvePendingBets } from '../services/walletService'
-import { combinedOdds, bookmakerMargin } from '../utils/financialMath'
-import type { Bet, BetSelection } from '../types'
+import { placeBet, getBetHistory, resolveBet, resolvePendingBets, subscribeToWallet } from '../services/walletService'
+import {
+  combinedOdds,
+  bookmakerMargin,
+  impliedProbability,
+  expectedValueOfBet,
+  summarizeUserBets,
+  estimateOpportunityCost,
+} from '../utils/financialMath'
+import type { Bet, BetSelection, Wallet } from '../types'
 import PostBetAnalysis from '../components/PostBetAnalysis'
 import BetHistory from '../components/BetHistory'
+import FloatingBetSlip from '../components/FloatingBetSlip'
 import MatchDetailModal from '../components/MatchDetailModal'
 import { Button, OddsButton, Badge } from '../components/ui'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
@@ -55,8 +63,14 @@ export default function Apuestas() {
   const [oddsError, setOddsError] = useState<string | null>(null)
   const [loadingOdds, setLoadingOdds] = useState(false)
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
-  const [slipOpen, setSlipOpen] = useState(true)
   const [detail, setDetail] = useState<{ fixtureId: string; sport: string } | null>(null)
+  const [wallet, setWallet] = useState<Wallet | null>(null)
+
+  // Saldo en vivo para la sidebar "Tu realidad".
+  useEffect(() => {
+    if (!user) return
+    return subscribeToWallet(user.uid, setWallet)
+  }, [user])
 
   // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
@@ -167,7 +181,7 @@ export default function Apuestas() {
       <div className="ledger-rule mt-4" />
 
       {/* ===== Sidebar de deportes/ligas + tablero ===== */}
-      <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-start">
+      <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-start">
         <LeagueRail leagues={LEAGUES} activeLeague={activeLeague} onSelect={setActiveLeague} />
 
         {/* TABLERO UNIFICADO (C6: una sola superficie, sin recuadros flotantes) */}
@@ -202,10 +216,8 @@ export default function Apuestas() {
           />
         )}
 
-        {/* Cuerpo: lista + boleto (en columna en celular, lado a lado en desktop) */}
-        <div className="flex flex-col md:flex-row md:items-stretch">
-          {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
-          <section className="min-w-0 flex-1 p-4">
+        {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
+        <section className="p-4">
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/45">Más partidos</p>
             <div className="ledger-rule mb-3" />
             <div className="divide-y divide-paperline/70">
@@ -225,122 +237,32 @@ export default function Apuestas() {
               )}
             </div>
           </section>
-
-          {/* Boleto colapsable / minimizable (C4) */}
-          <aside
-            className={`flex-none border-t border-paperline bg-paper/50 transition-all md:border-l md:border-t-0 ${
-              slipOpen ? 'w-full md:w-[300px]' : 'w-full md:w-14'
-            }`}
-          >
-            {slipOpen ? (
-              <div>
-                <div className="flex items-center justify-between border-b border-paperline px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSlipOpen(false)}
-                      title="Minimizar boleto"
-                      className="grid h-7 w-7 place-items-center rounded-md border border-paperline text-ink/60 hover:text-ink"
-                    >
-                      ›
-                    </button>
-                    <span className="font-serif text-base text-ink">Boleto</span>
-                  </div>
-                  <span className="figure text-xs text-ink/50">
-                    {selections.length === 0
-                      ? '—'
-                      : `${selections.length} ${selections.length === 1 ? 'selección' : 'selecciones'}`}
-                  </span>
-                </div>
-
-                {selections.length === 0 ? (
-                  <p className="px-4 py-10 text-center text-sm text-ink/50">
-                    Toca una cuota para añadirla a tu boleto.
-                  </p>
-                ) : (
-                  <div>
-                    <div className="divide-y divide-paperline">
-                      {selections.map((s) => (
-                        <div key={selectionKey(s)} className="px-4 py-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-ink">{localize(s.selectionLabel)}</p>
-                              <p className="figure mt-0.5 text-[11px] text-ink/50">
-                                {localize(s.fixtureLabel)} · {s.marketLabel}
-                              </p>
-                            </div>
-                            <span className="figure text-sm font-semibold text-slate">
-                              {s.decimalOdds.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="border-t border-paperline px-4 py-3 text-sm">
-                      <label className="flex items-center justify-between">
-                        <span className="text-ink/70">Monto (ficticio)</span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={stake}
-                          onChange={(e) => setStake(Number(e.target.value))}
-                          className="figure w-24 rounded border border-paperline px-2 py-1 text-right"
-                        />
-                      </label>
-                      <div className="mt-2 flex justify-between">
-                        <span className="text-ink/70">Cuota combinada</span>
-                        <span className="figure font-semibold text-ink">{odds.toFixed(2)}</span>
-                      </div>
-                      <div className="mt-1 flex justify-between">
-                        <span className="text-ink/70">Pago potencial</span>
-                        <span className="figure font-semibold text-sage">
-                          {(stake * odds).toLocaleString('es-EC', {
-                            style: 'currency',
-                            currency: 'USD',
-                          })}
-                        </span>
-                      </div>
-                    </div>
-
-                    {error && <p className="px-4 text-sm text-burgundy">{error}</p>}
-
-                    <div className="px-4 pb-4 pt-2">
-                      <Button onClick={placeBetNow} fullWidth size="lg">
-                        Realizar apuesta ficticia
-                      </Button>
-                      <p className="mt-2 text-center text-[11px] text-ink/50">
-                        El análisis completo aparece tras el resultado.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-3 py-3 md:flex-col md:py-4">
-                <button
-                  onClick={() => setSlipOpen(true)}
-                  title="Abrir boleto"
-                  className="grid h-9 w-9 place-items-center rounded-md border border-paperline bg-surface text-ink hover:border-slate"
-                >
-                  ‹
-                </button>
-                {selections.length > 0 && (
-                  <span className="figure grid h-6 min-w-6 place-items-center rounded-full bg-slate px-1.5 text-xs font-bold text-white">
-                    {selections.length}
-                  </span>
-                )}
-                <span className="font-serif text-sm text-ink/50 md:[writing-mode:vertical-rl] md:[transform:rotate(180deg)]">
-                  Boleto
-                </span>
-              </div>
-            )}
-          </aside>
         </div>
-        </div>
+
+        {/* Sidebar derecha: Tu realidad + La verdad incómoda */}
+        <BettingSidebar
+          wallet={wallet}
+          pastBets={pastBets}
+          featured={featured}
+          selections={selections}
+          stake={stake}
+          combined={odds}
+        />
       </div>
 
       {/* Historial: la pérdida acumulada, visible apuesta por apuesta */}
       <BetHistory bets={pastBets} />
+
+      {/* Boleto flotante minimizable, pegado al margen y por encima de todo */}
+      <FloatingBetSlip
+        selections={selections}
+        stake={stake}
+        onStakeChange={setStake}
+        combinedOdds={odds}
+        error={error}
+        onRemove={toggleSelection}
+        onPlace={placeBetNow}
+      />
 
       {/* Detalle del partido: todos los mercados disponibles */}
       {detail && (
@@ -425,8 +347,8 @@ function LeagueRail({
   onSelect: (id: string) => void
 }) {
   return (
-    <aside className="md:w-48 md:flex-none">
-      <div className="rounded-xl border border-paperline bg-surface p-2 shadow-sm md:sticky md:top-28">
+    <aside className="lg:w-48 lg:flex-none">
+      <div className="rounded-xl border border-paperline bg-surface p-2 shadow-sm lg:sticky lg:top-28">
         <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/45">
           Deportes
         </p>
@@ -434,7 +356,7 @@ function LeagueRail({
           <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
           Fútbol
         </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:gap-0.5 md:overflow-visible md:pb-0">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0">
           {leagues.map((lg) => {
             const active = lg.id === activeLeague
             return (
@@ -442,7 +364,7 @@ function LeagueRail({
                 key={lg.id}
                 onClick={() => onSelect(lg.id)}
                 title={lg.name}
-                className={`flex flex-none items-center gap-2 rounded-lg border py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors md:w-full ${
+                className={`flex flex-none items-center gap-2 rounded-lg border py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors lg:w-full ${
                   active
                     ? 'border-slate bg-slate/10 text-slate'
                     : 'border-transparent text-ink/55 hover:bg-paperline/40 hover:text-ink'
@@ -463,6 +385,116 @@ function LeagueRail({
       </div>
     </aside>
   )
+}
+
+/* ----------------------------------------------------------------------- */
+/* Sidebar derecha · "Tu realidad" (saldo, pérdida, costo de oportunidad) y  */
+/* "La verdad incómoda" (margen de la casa, valor esperado del boleto). En   */
+/* desktop es una columna fija; en pantallas chicas se apila bajo el tablero.*/
+/* ----------------------------------------------------------------------- */
+function BettingSidebar({
+  wallet,
+  pastBets,
+  featured,
+  selections,
+  stake,
+  combined,
+}: {
+  wallet: Wallet | null
+  pastBets: Bet[]
+  featured?: RawFixtureOdds
+  selections: BetSelection[]
+  stake: number
+  combined: number
+}) {
+  const stats = summarizeUserBets(pastBets)
+  const net = wallet ? wallet.totalWon - wallet.totalLost : stats.net
+  const opportunity = wallet && wallet.totalStaked > 0 ? estimateOpportunityCost(wallet.totalStaked, 5) : null
+  const houseMargin = featured ? bookmakerMargin(featured.options.map((o) => o.decimalOdds)) : null
+  const hasSlip = selections.length > 0
+  const ev = expectedValueOfBet(stake)
+  const impliedCombined = impliedProbability(combined)
+
+  return (
+    <aside className="lg:w-80 lg:flex-none">
+      <div className="space-y-4 lg:sticky lg:top-28">
+        {/* Tu realidad */}
+        <div className="overflow-hidden rounded-xl border border-paperline bg-surface shadow-sm">
+          <div className="border-b border-paperline px-4 py-2.5">
+            <h3 className="font-serif text-sm text-ink">Tu realidad</h3>
+          </div>
+          <div className="space-y-2.5 px-4 py-3">
+            <SideRow label="Saldo ficticio" value={wallet ? money(wallet.balance) : '—'} />
+            <SideRow
+              label="Pérdida acumulada"
+              value={wallet ? `−${money(wallet.totalLost)}` : '—'}
+              tone={wallet && wallet.totalLost > 0 ? 'bad' : undefined}
+            />
+            <SideRow
+              label="Resultado neto"
+              value={`${net < 0 ? '−' : '+'}${money(Math.abs(net))}`}
+              tone={net < 0 ? 'bad' : net > 0 ? 'good' : undefined}
+            />
+            <SideRow label="Tu acierto real" value={stats.hitRate != null ? `${(stats.hitRate * 100).toFixed(0)}%` : '—'} />
+            {opportunity && (
+              <div className="rounded-lg border border-sage/30 bg-sage/5 px-3 py-2">
+                <p className="text-[11px] text-ink/60">Si lo hubieras invertido (5 años)</p>
+                <p className="figure text-base font-semibold text-sage">{money(opportunity.futureValue)}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* La verdad incómoda */}
+        <div className="overflow-hidden rounded-xl border border-ochre/30 bg-surface shadow-sm">
+          <div className="flex items-center justify-between border-b border-ochre/30 px-4 py-2.5">
+            <h3 className="font-serif text-sm text-ink">La verdad incómoda</h3>
+            <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
+          </div>
+          <div className="space-y-2.5 px-4 py-3">
+            <SideRow
+              label="Margen de la casa"
+              value={houseMargin != null ? `~${(houseMargin * 100).toFixed(1)}%` : '—'}
+              tone="bad"
+            />
+            {hasSlip ? (
+              <>
+                <SideRow label="Valor esperado del boleto" value={`−${money(Math.abs(ev))}`} tone="bad" />
+                <SideRow label="Prob. implícita (combinada)" value={`${(impliedCombined * 100).toFixed(1)}%`} />
+                <p className="text-[11px] leading-relaxed text-ink/55">
+                  Aun cuando ganes, en promedio cada apuesta de {money(stake)} te cuesta {money(Math.abs(ev))} por
+                  el margen. Esa es la matemática que sostiene a la casa.
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-ink/55">
+                Armá un boleto para ver su valor esperado y la probabilidad real detrás de las cuotas.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+function SideRow({ label, value, tone }: { label: string; value: string; tone?: 'good' | 'bad' }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-[12px] text-ink/60">{label}</span>
+      <span
+        className={`figure text-sm font-semibold ${
+          tone === 'bad' ? 'text-burgundy' : tone === 'good' ? 'text-sage' : 'text-ink'
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function money(n: number): string {
+  return n.toLocaleString('es-EC', { style: 'currency', currency: 'USD' })
 }
 
 /* ----------------------------------------------------------------------- */

@@ -48,7 +48,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         {wallet && <LedgerBar wallet={wallet} />}
 
         <header className="border-b border-paperline bg-paper/95 backdrop-blur">
-          <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <nav className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-3 lg:px-6">
             <span className="font-serif text-lg tracking-tight text-ink">CuentaClara</span>
             <div className="flex gap-6 text-sm">
               <Tab to="/">Cuenta</Tab>
@@ -76,7 +76,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </header>
       </div>
 
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-[1440px] px-4 py-8 lg:px-6">{children}</main>
 
       {showThreshold && wallet && (
         <ThresholdIntervention
