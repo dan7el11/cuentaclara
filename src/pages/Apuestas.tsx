@@ -166,38 +166,12 @@ export default function Apuestas() {
       </div>
       <div className="ledger-rule mt-4" />
 
-      {/* ===== TABLERO UNIFICADO (C6: una sola superficie, sin recuadros flotantes) ===== */}
-      <div className="mt-5 overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
-        {/* Barra de ligas desplegable, con símbolos (C3 / C7) */}
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-paperline bg-paper/50 px-4 py-3">
-          <span className="mr-2 flex flex-none items-center gap-2 border-r border-paperline pr-3 text-sm font-semibold text-ink">
-            <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
-            Fútbol
-          </span>
-          {LEAGUES.map((lg) => {
-            const active = lg.id === activeLeague
-            return (
-              <button
-                key={lg.id}
-                onClick={() => setActiveLeague(lg.id)}
-                className={`flex flex-none items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors ${
-                  active
-                    ? 'border-slate bg-slate/10 text-slate shadow-sm'
-                    : 'border-paperline text-ink/55 hover:border-slate/40 hover:text-ink'
-                }`}
-              >
-                <span
-                  className={`grid h-6 w-6 flex-none place-items-center rounded-md text-[10px] font-bold ${
-                    active ? 'bg-slate text-white' : 'bg-paperline text-ink'
-                  }`}
-                >
-                  {lg.code}
-                </span>
-                {lg.name}
-              </button>
-            )
-          })}
-        </div>
+      {/* ===== Sidebar de deportes/ligas + tablero ===== */}
+      <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-start">
+        <LeagueRail leagues={LEAGUES} activeLeague={activeLeague} onSelect={setActiveLeague} />
+
+        {/* TABLERO UNIFICADO (C6: una sola superficie, sin recuadros flotantes) */}
+        <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-paperline bg-surface shadow-[0_18px_50px_-26px_rgba(28,36,48,0.45)]">
 
         {/* Aviso de error real al cargar cuotas (ya no se traga en silencio) */}
         {oddsError && (
@@ -362,6 +336,7 @@ export default function Apuestas() {
             )}
           </aside>
         </div>
+        </div>
       </div>
 
       {/* Historial: la pérdida acumulada, visible apuesta por apuesta */}
@@ -439,6 +414,61 @@ export default function Apuestas() {
 /** Una apuesta es "de ejemplo" si todas sus selecciones son datos mock. */
 function isMockBet(bet: Bet): boolean {
   return bet.selections.every((s) => s.fixtureId.startsWith('mock-'))
+}
+
+/* ----------------------------------------------------------------------- */
+/* Sidebar compacta de deportes/ligas. En desktop es una columna estrecha   */
+/* fija; en móvil colapsa a una fila con scroll horizontal para no robar     */
+/* altura. Agrupada por deporte (hoy solo Fútbol).                           */
+/* ----------------------------------------------------------------------- */
+function LeagueRail({
+  leagues,
+  activeLeague,
+  onSelect,
+}: {
+  leagues: { id: string; code: string; name: string }[]
+  activeLeague: string
+  onSelect: (id: string) => void
+}) {
+  return (
+    <aside className="md:w-48 md:flex-none">
+      <div className="rounded-xl border border-paperline bg-surface p-2 shadow-sm md:sticky md:top-28">
+        <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/45">
+          Deportes
+        </p>
+        <div className="flex items-center gap-1.5 px-2 pb-2 text-sm font-semibold text-ink">
+          <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
+          Fútbol
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:gap-0.5 md:overflow-visible md:pb-0">
+          {leagues.map((lg) => {
+            const active = lg.id === activeLeague
+            return (
+              <button
+                key={lg.id}
+                onClick={() => onSelect(lg.id)}
+                title={lg.name}
+                className={`flex flex-none items-center gap-2 rounded-lg border py-1.5 pl-1.5 pr-3 text-sm font-medium transition-colors md:w-full ${
+                  active
+                    ? 'border-slate bg-slate/10 text-slate'
+                    : 'border-transparent text-ink/55 hover:bg-paperline/40 hover:text-ink'
+                }`}
+              >
+                <span
+                  className={`grid h-6 w-6 flex-none place-items-center rounded-md text-[10px] font-bold ${
+                    active ? 'bg-slate text-white' : 'bg-paperline text-ink'
+                  }`}
+                >
+                  {lg.code}
+                </span>
+                <span className="truncate">{lg.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </aside>
+  )
 }
 
 /* ----------------------------------------------------------------------- */

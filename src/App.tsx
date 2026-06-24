@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Apuestas from './pages/Apuestas'
+import MisApuestas from './pages/MisApuestas'
 import Educacion from './pages/Educacion'
 import Apoyo from './pages/Apoyo'
 import Showcase from './pages/Showcase'
@@ -35,6 +36,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/apuestas" element={<Apuestas />} />
+        <Route path="/mis-apuestas" element={<MisApuestas />} />
         <Route path="/educacion" element={<Educacion />} />
         <Route path="/apoyo" element={<Apoyo />} />
         <Route path="*" element={<Navigate to="/" />} />

@@ -53,6 +53,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div className="flex gap-6 text-sm">
               <Tab to="/">Cuenta</Tab>
               <Tab to="/apuestas">Apuestas</Tab>
+              <Tab to="/mis-apuestas">Mis apuestas</Tab>
               <Tab to="/educacion">Educación financiera</Tab>
               <Tab to="/apoyo">Apoyo</Tab>
             </div>
