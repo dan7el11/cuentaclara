@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { Logo } from './ui'
 import { subscribeToWallet } from '../services/walletService'
 import { listenForegroundPush } from '../services/push'
 import { recordDailyActivity } from '../services/analyticsService'
@@ -49,7 +50,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
         <header className="border-b border-paperline bg-paper/95 backdrop-blur">
           <nav className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-3 lg:px-6">
-            <span className="font-serif text-lg tracking-tight text-ink">CuentaClara</span>
+            <Logo variant="full" size={22} ink="var(--color-text)" />
             <div className="flex gap-6 text-sm">
               <Tab to="/">Cuenta</Tab>
               <Tab to="/apuestas">Apuestas</Tab>
