@@ -1,74 +1,82 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactElement } from 'react'
 
-type Variant = 'full' | 'mono' | 'icon'
+/**
+ * Logo de NoBetter.
+ *
+ * Wordmark oblicuo a dos tintas, en la línea de la referencia de marca.
+ * El texto usa la fuente "Archivo" (peso 900, itálica) — agregala al
+ * <link> de Google Fonts del index.html (ver INTEGRATION.md).
+ *
+ * La variante `icon` es SVG vectorial puro: no depende de ninguna fuente,
+ * por eso sirve igual como sello, favicon o app-icon a cualquier tamaño.
+ */
 
-interface Props {
-  /** `full` (wordmark a dos tintas) · `mono` (una tinta) · `icon` (sello "C") */
-  variant?: Variant
-  /** Alto en px; el ancho se calcula solo. */
+type LogoVariant = 'full' | 'mono' | 'icon'
+
+interface LogoProps {
+  /** 'full' = wordmark a dos tintas · 'mono' = una sola tinta · 'icon' = sello "N" */
+  variant?: LogoVariant
+  /** Alto del logo en px (el ancho se ajusta solo). Por defecto 28. */
   size?: number
-  /** Color de acento (por defecto rojo de marca). */
+  /** Color del acento — el "No". Por defecto el rojo de la referencia. */
   accent?: string
-  /** Tinta del texto (por defecto casi-negro de marca). */
+  /** Color de la tinta principal — el "Better". Por defecto la tinta del DS. */
   ink?: string
-  style?: CSSProperties
+  className?: string
+  /** Texto accesible. Por defecto "NoBetter". */
   title?: string
 }
 
+// Rojo de la referencia. Para alinear al DS, pasá accent="var(--burgundy)".
 const ACCENT = '#ED1C24'
 const INK = '#16181D'
 
-/**
- * Logo de marca. El wordmark usa Archivo 900 itálica (cargada en index.html).
- * La variante `icon` es SVG puro: no depende de la fuente y escala sin pérdida.
- */
+const wordmarkStyle = (size: number): CSSProperties => ({
+  fontFamily: '"Archivo", system-ui, sans-serif',
+  fontWeight: 900,
+  fontStyle: 'italic',
+  fontSize: size,
+  letterSpacing: '-0.045em',
+  lineHeight: 1,
+  whiteSpace: 'nowrap',
+  userSelect: 'none',
+})
+
 export function Logo({
   variant = 'full',
   size = 28,
   accent = ACCENT,
   ink = INK,
-  style,
-  title = 'CuentaClara',
-}: Props) {
+  className,
+  title = 'NoBetter',
+}: LogoProps): ReactElement {
   if (variant === 'icon') {
     return (
       <svg
-        viewBox="0 0 64 64"
+        className={className}
         width={size}
         height={size}
+        viewBox="0 0 100 100"
         role="img"
         aria-label={title}
-        style={style}
+        xmlns="http://www.w3.org/2000/svg"
       >
-        <rect x="0" y="0" width="64" height="64" rx="14" fill={accent} />
-        <path
-          d="M 42.29 19.74 A 16 16 0 1 0 42.29 44.26"
-          fill="none"
-          stroke="#FFFFFF"
-          strokeWidth="9"
-          strokeLinecap="round"
-        />
+        <rect width="100" height="100" rx="22" fill={ink} />
+        <g transform="translate(10,0) skewX(-12)" fill={accent}>
+          <rect x="24" y="28" width="16" height="44" />
+          <rect x="60" y="28" width="16" height="44" />
+          <polygon points="24,28 40,28 76,72 60,72" />
+        </g>
       </svg>
     )
   }
 
-  const wordStyle: CSSProperties = {
-    fontFamily: '"Archivo", Inter, system-ui, sans-serif',
-    fontWeight: 900,
-    fontStyle: 'italic',
-    fontSize: `${size}px`,
-    lineHeight: 1,
-    letterSpacing: '-0.02em',
-    whiteSpace: 'nowrap',
-    userSelect: 'none',
-    ...style,
-  }
+  const noColor = variant === 'mono' ? ink : accent
 
-  // Dos tintas: "Cuenta" en tinta, "Clara" en acento. En `mono`, todo una tinta.
   return (
-    <span style={wordStyle} aria-label={title} role="img">
-      <span style={{ color: ink }}>Cuenta</span>
-      <span style={{ color: variant === 'mono' ? ink : accent }}>Clara</span>
+    <span className={className} role="img" aria-label={title} style={wordmarkStyle(size)}>
+      <span style={{ color: noColor }}>No</span>
+      <span style={{ color: ink }}>Better</span>
     </span>
   )
 }
