@@ -58,7 +58,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Tab to="/educacion">Educación financiera</Tab>
               <Tab to="/apoyo">Apoyo</Tab>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={toggle}
                 title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
@@ -67,11 +67,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               >
                 {theme === 'dark' ? '☀' : '☾'}
               </button>
-              {user && (
-                <button onClick={logout} className="text-sm text-ink/60 hover:text-ink">
-                  Salir
-                </button>
-              )}
+              {user && <ProfileMenu email={user.email} balance={wallet?.balance} onLogout={logout} />}
             </div>
           </nav>
         </header>
@@ -84,6 +80,72 @@ export default function Layout({ children }: { children: ReactNode }) {
           balance={wallet.balance}
           onAcknowledge={() => setThresholdAcknowledgedFor(wallet.balance)}
         />
+      )}
+    </div>
+  )
+}
+
+/** Botón de perfil con menú: email, saldo y salir. */
+function ProfileMenu({
+  email,
+  balance,
+  onLogout,
+}: {
+  email: string | null
+  balance?: number
+  onLogout: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const initial = (email ?? '?').trim().charAt(0).toUpperCase() || '?'
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Tu perfil"
+        title="Tu perfil"
+        className="grid h-8 w-8 place-items-center rounded-full border border-paperline bg-slate/10 text-sm font-semibold text-slate transition-colors hover:border-slate"
+      >
+        {initial}
+      </button>
+
+      {open && (
+        <>
+          {/* Capa para cerrar al hacer clic afuera */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-paperline bg-surface shadow-xl">
+            <div className="border-b border-paperline px-4 py-3">
+              <p className="text-[11px] uppercase tracking-wide text-ink/45">Sesión</p>
+              <p className="truncate text-sm font-medium text-ink" title={email ?? undefined}>
+                {email ?? 'Cuenta ficticia'}
+              </p>
+            </div>
+            {balance != null && (
+              <div className="flex items-center justify-between border-b border-paperline px-4 py-3">
+                <span className="text-sm text-ink/60">Saldo ficticio</span>
+                <span className="figure text-sm font-semibold text-ink">
+                  {balance.toLocaleString('es-EC', { style: 'currency', currency: 'USD' })}
+                </span>
+              </div>
+            )}
+            <NavLink
+              to="/"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-ink/70 transition-colors hover:bg-paper/60 hover:text-ink"
+            >
+              Mi cuenta
+            </NavLink>
+            <button
+              onClick={() => {
+                setOpen(false)
+                onLogout()
+              }}
+              className="block w-full px-4 py-2.5 text-left text-sm text-burgundy transition-colors hover:bg-burgundy/10"
+            >
+              Salir
+            </button>
+          </div>
+        </>
       )}
     </div>
   )

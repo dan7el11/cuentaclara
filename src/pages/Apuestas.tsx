@@ -22,6 +22,7 @@ import FloatingBetSlip from '../components/FloatingBetSlip'
 import MatchDetailModal from '../components/MatchDetailModal'
 import { Button, OddsButton, Badge } from '../components/ui'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
+import { isLive, pickFeatured } from '../utils/featured'
 
 /**
  * Ligas para la barra superior desplegable (C3 / C7). `sport` es la clave
@@ -65,6 +66,7 @@ export default function Apuestas() {
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
   const [detail, setDetail] = useState<{ fixtureId: string; sport: string } | null>(null)
   const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [onlyLive, setOnlyLive] = useState(false)
 
   // Saldo en vivo para la sidebar "Tu realidad".
   useEffect(() => {
@@ -162,8 +164,12 @@ export default function Apuestas() {
   }
 
   const odds = combinedOdds(selections)
-  const featured = fixtures[0]
-  const listFixtures = fixtures.slice(1)
+  const now = Date.now()
+  // El destacado es el de mayor relevancia (no el próximo) — ver utils/featured.
+  const featured = pickFeatured(fixtures, now)
+  const rest = featured ? fixtures.filter((f) => f.fixtureId !== featured.fixtureId) : fixtures
+  const liveCount = fixtures.filter((f) => isLive(f, now)).length
+  const listFixtures = onlyLive ? rest.filter((f) => isLive(f, now)) : rest
 
   return (
     <div>
@@ -206,10 +212,11 @@ export default function Apuestas() {
           </div>
         )}
 
-        {/* Partido destacado, integrado en el panel (C6 / C8 / C11 / C14) */}
+        {/* Partido destacado por relevancia (C6 / C8 / C11 / C14) */}
         {featured && !loadingOdds && (
           <FeaturedFixture
             fixture={featured}
+            live={isLive(featured, now)}
             selections={selections}
             onPick={toggleSelection}
             onOpenDetail={openDetail}
@@ -218,13 +225,32 @@ export default function Apuestas() {
 
         {/* Lista de partidos (C1: solo 1X2 · C9 / C10: alineados) */}
         <section className="p-4">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/45">Más partidos</p>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+                {onlyLive ? 'En vivo ahora' : 'Más partidos'}
+              </p>
+              <button
+                onClick={() => setOnlyLive((v) => !v)}
+                disabled={liveCount === 0 && !onlyLive}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-40 ${
+                  onlyLive
+                    ? 'border-burgundy bg-burgundy text-white'
+                    : 'border-paperline text-ink/60 hover:border-burgundy/50 hover:text-ink'
+                }`}
+                title={liveCount === 0 ? 'No hay partidos en vivo ahora' : 'Mostrar solo partidos en vivo'}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full bg-burgundy ${onlyLive ? 'bg-white' : ''} ${liveCount > 0 ? 'animate-pulse' : ''}`} />
+                En vivo
+                {liveCount > 0 && <span className="figure opacity-80">{liveCount}</span>}
+              </button>
+            </div>
             <div className="ledger-rule mb-3" />
             <div className="divide-y divide-paperline/70">
               {listFixtures.map((fixture) => (
                 <FixtureRow
                   key={fixture.fixtureId}
                   fixture={fixture}
+                  live={isLive(fixture, now)}
                   selections={selections}
                   onPick={toggleSelection}
                   onOpenDetail={openDetail}
@@ -232,7 +258,7 @@ export default function Apuestas() {
               ))}
               {listFixtures.length === 0 && !loadingOdds && !oddsError && (
                 <p className="py-6 text-center text-sm text-ink/50">
-                  No hay más partidos disponibles ahora mismo.
+                  {onlyLive ? 'No hay partidos en vivo en esta competición ahora.' : 'No hay más partidos disponibles ahora mismo.'}
                 </p>
               )}
             </div>
@@ -505,11 +531,13 @@ function money(n: number): string {
 /* ----------------------------------------------------------------------- */
 function FeaturedFixture({
   fixture,
+  live = false,
   selections,
   onPick,
   onOpenDetail,
 }: {
   fixture: RawFixtureOdds
+  live?: boolean
   selections: BetSelection[]
   onPick: (sel: BetSelection) => void
   onOpenDetail: (f: RawFixtureOdds) => void
@@ -536,12 +564,19 @@ function FeaturedFixture({
       <div className="relative flex flex-wrap items-center justify-between gap-5">
         <div className="min-w-[260px] flex-1">
           <div className="mb-4 flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-paper" />
-              DESTACADO
-            </span>
+            {live ? (
+              <span className="flex items-center gap-1.5 rounded bg-burgundy px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                EN VIVO
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 rounded bg-white/15 px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
+                <span className="h-1.5 w-1.5 rounded-full bg-ochre" />
+                DESTACADO
+              </span>
+            )}
             <span className="text-xs font-medium uppercase tracking-[0.1em] text-white/55">
-              {kickoff ?? 'Partido destacado'}
+              {live ? 'En juego ahora' : kickoff ?? 'Partido destacado'}
             </span>
           </div>
           {teams ? (
@@ -623,11 +658,13 @@ function TeamName({ name }: { name: string }) {
 /* ----------------------------------------------------------------------- */
 function FixtureRow({
   fixture,
+  live = false,
   selections,
   onPick,
   onOpenDetail,
 }: {
   fixture: RawFixtureOdds
+  live?: boolean
   selections: BetSelection[]
   onPick: (sel: BetSelection) => void
   onOpenDetail: (f: RawFixtureOdds) => void
@@ -653,7 +690,14 @@ function FixtureRow({
           <span className="text-sm font-medium text-ink">{fixture.label}</span>
         )}
         <p className="figure mt-1.5 pl-[30px] text-[10px] text-ink/40">
-          {kickoff && <span>{kickoff} · </span>}
+          {live ? (
+            <span className="font-semibold text-burgundy">
+              <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-burgundy align-middle" />
+              EN VIVO ·{' '}
+            </span>
+          ) : (
+            kickoff && <span>{kickoff} · </span>
+          )}
           {fixture.market}
           {margin != null && (
             <span className="text-ochre"> · casa ~{(margin * 100).toFixed(1)}%</span>
