@@ -59,7 +59,7 @@ export async function listenForegroundPush(): Promise<() => void> {
   return onMessage(messaging, (payload) => {
     const n = payload.notification
     if (n && Notification.permission === 'granted') {
-      new Notification(n.title ?? 'CuentaClara', { body: n.body })
+      new Notification(n.title ?? 'NoBetter', { body: n.body })
     }
   })
 }

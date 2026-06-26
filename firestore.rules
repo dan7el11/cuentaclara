@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Reglas de seguridad de Firestore para CuentaClara.
+// Reglas de seguridad de Firestore para NoBetter.
 //
 // Cómo aplicarlas: Firebase Console > Firestore Database > pestaña "Rules",
 // pegá este contenido y publicá. (O `firebase deploy --only firestore:rules`.)

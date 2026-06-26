@@ -1,9 +1,9 @@
-# CuentaClara (nombre de trabajo)
+# NoBetter
 
 MVP del proyecto: simulador de apuestas con dinero ficticio y cuotas reales,
 pensado para mostrar las consecuencias financieras reales de apostar, no
-para entrenar el hábito. "CuentaClara" es solo un nombre de trabajo —
-cambialo por el branding final cuando lo tengas.
+para entrenar el hábito. La marca pública es **NoBetter** (el repo conserva
+el nombre `cuentaclara` por compatibilidad).
 
 ## Arrancar en local
 
