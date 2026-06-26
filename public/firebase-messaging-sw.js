@@ -21,7 +21,7 @@ const messaging = firebase.messaging()
 
 messaging.onBackgroundMessage((payload) => {
   const notification = payload.notification || {}
-  self.registration.showNotification(notification.title || 'CuentaClara', {
+  self.registration.showNotification(notification.title || 'NoBetter', {
     body: notification.body || '',
     icon: '/icon.png',
     data: { link: (payload.fcmOptions && payload.fcmOptions.link) || '/apuestas' },

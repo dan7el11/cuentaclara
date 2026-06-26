@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // se referencia en el dashboard y en el estado de cuenta.
     await setDoc(doc(db, 'cards', cred.user.uid), {
       uid: cred.user.uid,
-      brand: 'Tarjeta CuentaClara',
+      brand: 'Tarjeta NoBetter',
       holderName: email.split('@')[0].toUpperCase(),
       maskedNumber: `0000 •••• •••• ${Math.floor(1000 + Math.random() * 9000)}`,
       expiry: '00/00 (ficticia)',
