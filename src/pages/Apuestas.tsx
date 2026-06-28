@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   fetchUpcomingOdds,
@@ -20,7 +20,7 @@ import PostBetAnalysis from '../components/PostBetAnalysis'
 import BetHistory from '../components/BetHistory'
 import FloatingBetSlip from '../components/FloatingBetSlip'
 import MatchDetailModal from '../components/MatchDetailModal'
-import { Button, OddsButton, Badge } from '../components/ui'
+import { Button, OddsButton, Badge, AdSlot } from '../components/ui'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 import { isLive, pickFeatured } from '../utils/featured'
 
@@ -246,15 +246,22 @@ export default function Apuestas() {
             </div>
             <div className="ledger-rule mb-3" />
             <div className="divide-y divide-paperline/70">
-              {listFixtures.map((fixture) => (
-                <FixtureRow
-                  key={fixture.fixtureId}
-                  fixture={fixture}
-                  live={isLive(fixture, now)}
-                  selections={selections}
-                  onPick={toggleSelection}
-                  onOpenDetail={openDetail}
-                />
+              {listFixtures.map((fixture, i) => (
+                <Fragment key={fixture.fixtureId}>
+                  <FixtureRow
+                    fixture={fixture}
+                    live={isLive(fixture, now)}
+                    selections={selections}
+                    onPick={toggleSelection}
+                    onOpenDetail={openDetail}
+                  />
+                  {/* Espacio publicitario in-feed, tras los primeros partidos */}
+                  {i === 3 && listFixtures.length > 5 && (
+                    <div className="py-3">
+                      <AdSlot format="banner" slotId="apuestas-infeed" />
+                    </div>
+                  )}
+                </Fragment>
               ))}
               {listFixtures.length === 0 && !loadingOdds && !oddsError && (
                 <p className="py-6 text-center text-sm text-ink/50">
@@ -499,6 +506,9 @@ function BettingSidebar({
             )}
           </div>
         </div>
+
+        {/* Espacio publicitario (reservado) */}
+        <AdSlot format="rectangle" slotId="apuestas-sidebar" />
       </div>
     </aside>
   )

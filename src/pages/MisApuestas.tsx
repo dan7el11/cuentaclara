@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getBetHistory } from '../services/walletService'
 import BetHistory from '../components/BetHistory'
-import { Badge } from '../components/ui'
+import { Badge, AdSlot } from '../components/ui'
 import type { Bet, BetStatus } from '../types'
 
 type Filter = 'all' | 'won' | 'lost' | 'pending'
@@ -89,6 +89,11 @@ export default function MisApuestas() {
           <BetHistory bets={filtered} title="Resultados" flush />
         </div>
       )}
+
+      {/* Espacio publicitario (reservado) */}
+      <div className="mt-8">
+        <AdSlot format="leaderboard" slotId="mis-apuestas-bottom" />
+      </div>
     </div>
   )
 }
