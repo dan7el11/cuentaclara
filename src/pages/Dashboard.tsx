@@ -13,7 +13,7 @@ import { estimateOpportunityCost } from '../utils/financialMath'
 import type { Transaction, VirtualCardData, Wallet } from '../types'
 import VirtualCard from '../components/VirtualCard'
 import DepositModal from '../components/DepositModal'
-import { Button } from '../components/ui'
+import { Button, AdSlot } from '../components/ui'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -249,6 +249,11 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Espacio publicitario (reservado) */}
+      <div className="mt-6">
+        <AdSlot format="leaderboard" slotId="dashboard-bottom" />
       </div>
 
       {depositOpen && (
