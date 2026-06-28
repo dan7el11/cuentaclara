@@ -310,7 +310,7 @@ export default function Apuestas() {
 
       {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
       {resultBet && resultBet.status !== 'pending' && (
-        <PostBetAnalysis bet={resultBet} pastBets={pastBets} onClose={() => setResultBet(null)} />
+        <PostBetAnalysis bet={resultBet} pastBets={pastBets} wallet={wallet} onClose={() => setResultBet(null)} />
       )}
 
       {resultBet && resultBet.status === 'pending' && (
