@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NoBetter</string>
+    <string name="title_activity_main">NoBetter</string>
+    <string name="package_name">com.nobetter.app</string>
+    <string name="custom_url_scheme">com.nobetter.app</string>
+</resources>
