@@ -35,9 +35,16 @@ npm run android:apk         # genera android/app/build/outputs/apk/debug/app-deb
 - **Íconos de launcher**: hoy usa los de Capacitor por defecto. Para poner el sello
   NoBetter, agregá un PNG fuente y corré `@capacitor/assets`
   (`npx @capacitor/assets generate --android`).
-- **Notificaciones push**: la web usa Firebase Cloud Messaging para web; en nativo hay
-  que sumar `@capacitor/push-notifications` (o el plugin de FCM) y configurar
-  `google-services.json`. Pendiente.
+- **Notificaciones push (nativo)**: ya está integrado `@capacitor/push-notifications`.
+  `enablePush()` detecta la plataforma: en web usa FCM web, en nativo registra el
+  dispositivo y guarda el token FCM en `wallets/{uid}.fcmTokens` (mismo array que web),
+  así el backend envía igual a ambos. Para que funcione en Android falta **tu** config
+  de Firebase:
+  1. En Firebase Console, agregá una app **Android** con el package `com.nobetter.app`.
+  2. Descargá `google-services.json` y ponelo en `android/app/google-services.json`.
+     (El `app/build.gradle` ya aplica el plugin gms sólo si el archivo existe; sin él,
+     compila igual pero el push nativo queda inactivo.)
+  3. En backend, seguí enviando por token FCM como ya hacés para web.
 - **Rutas**: la app usa `BrowserRouter`; dentro del WebView la navegación por enlaces
   funciona. Si en el futuro hiciera falta, se puede pasar a `HashRouter` para recargas
   de rutas profundas.
@@ -45,3 +52,20 @@ npm run android:apk         # genera android/app/build/outputs/apk/debug/app-deb
   al hacer `vite build`; definilas antes del `android:sync`.
 - **Publicar**: para la Play Store se genera un **AAB** firmado
   (`./gradlew bundleRelease`) con tu keystore.
+
+## CI (GitHub Actions)
+
+`.github/workflows/android.yml` compila un **APK de debug** en cada push a `main`,
+en tags `v*`, o a mano (workflow_dispatch), y lo sube como artefacto
+`nobetter-debug-apk`.
+
+Secrets opcionales del repo (Settings → Secrets → Actions):
+
+- `VITE_GETODDS_URL`, `VITE_FIREBASE_*`, `VITE_FIREBASE_VAPID_KEY` — se hornean en el
+  bundle. Sin ellos, el APK corre en modo demo (mock).
+- `GOOGLE_SERVICES_JSON` — el `google-services.json` en **base64**
+  (`base64 -w0 google-services.json`). Si está, el CI lo escribe y habilita el push
+  nativo en ese build.
+
+El APK de CI es **de debug** (sin firmar para producción). Para la Play Store, firmá
+un AAB de release con tu keystore (idealmente en otro workflow con secrets de firma).
