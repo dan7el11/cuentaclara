@@ -1,14 +1,12 @@
 import { Fragment, useEffect, useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import {
   fetchUpcomingOdds,
   toBetSelection,
   selectionKey,
   type RawFixtureOdds,
 } from '../services/oddsApi'
-import { placeBet, getBetHistory, resolveBet, resolvePendingBets, subscribeToWallet } from '../services/walletService'
 import {
-  combinedOdds,
   bookmakerMargin,
   impliedProbability,
   expectedValueOfBet,
@@ -16,13 +14,11 @@ import {
   estimateOpportunityCost,
 } from '../utils/financialMath'
 import type { Bet, BetSelection, Wallet } from '../types'
-import PostBetAnalysis from '../components/PostBetAnalysis'
 import BetHistory from '../components/BetHistory'
-import FloatingBetSlip from '../components/FloatingBetSlip'
-import MatchDetailModal from '../components/MatchDetailModal'
-import { Button, OddsButton, Badge, AdSlot } from '../components/ui'
+import { OddsButton, Badge, AdSlot } from '../components/ui'
 import { flagUrl, teamsFromLabel, outcomeSymbol, displayTeam, localize } from '../utils/flag'
 import { isLive, pickFeatured } from '../utils/featured'
+import { useBetSlip } from '../context/BetSlipContext'
 
 /**
  * Ligas para la barra superior desplegable (C3 / C7). `sport` es la clave
@@ -54,25 +50,15 @@ function formatKickoff(iso?: string): string | null {
 }
 
 export default function Apuestas() {
-  const { user } = useAuth()
+  const navigate = useNavigate()
+  // Boleto global: selecciones, saldo e historial viven en el contexto y
+  // sobreviven a la navegación (p. ej. a la página de mercados del partido).
+  const { selections, toggleSelection, combined: odds, stake, pastBets, wallet } = useBetSlip()
   const [fixtures, setFixtures] = useState<RawFixtureOdds[]>([])
-  const [selections, setSelections] = useState<BetSelection[]>([])
-  const [stake, setStake] = useState(5)
-  const [pastBets, setPastBets] = useState<Bet[]>([])
-  const [resultBet, setResultBet] = useState<Bet | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [oddsError, setOddsError] = useState<string | null>(null)
   const [loadingOdds, setLoadingOdds] = useState(false)
   const [activeLeague, setActiveLeague] = useState(LEAGUES[0].id)
-  const [detail, setDetail] = useState<{ fixtureId: string; sport: string } | null>(null)
-  const [wallet, setWallet] = useState<Wallet | null>(null)
   const [onlyLive, setOnlyLive] = useState(false)
-
-  // Saldo en vivo para la sidebar "Tu realidad".
-  useEffect(() => {
-    if (!user) return
-    return subscribeToWallet(user.uid, setWallet)
-  }, [user])
 
   // Recarga las cuotas cada vez que cambia la liga seleccionada.
   useEffect(() => {
@@ -88,82 +74,11 @@ export default function Apuestas() {
       .finally(() => setLoadingOdds(false))
   }, [activeLeague])
 
-  // Al entrar: resuelve apuestas pendientes con resultados reales y, si
-  // alguna se resolvió ahora, muestra su análisis.
-  useEffect(() => {
-    if (!user) return
-    let cancelled = false
-    ;(async () => {
-      let resolvedIds: string[] = []
-      try {
-        resolvedIds = await resolvePendingBets(user.uid)
-      } catch {
-        // Sin resultados disponibles: las apuestas siguen pendientes.
-      }
-      const history = await getBetHistory(user.uid)
-      if (cancelled) return
-      setPastBets(history)
-      if (resolvedIds.length > 0) {
-        const justResolved = history.find(
-          (b) => resolvedIds.includes(b.id) && b.status !== 'pending'
-        )
-        if (justResolved) setResultBet(justResolved)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [user])
-
-  // Alterna una selección en el boleto. Solo se permite una selección por
-  // (partido, mercado): no podés tomar dos resultados del mismo mercado.
-  function toggleSelection(sel: BetSelection) {
-    setSelections((prev) => {
-      const key = selectionKey(sel)
-      const exists = prev.some((s) => selectionKey(s) === key)
-      const rest = prev.filter(
-        (s) => !(s.fixtureId === sel.fixtureId && s.marketKey === sel.marketKey)
-      )
-      return exists ? rest : [...rest, sel]
-    })
-  }
-
+  // Al tocar un partido se abre la página con TODOS sus mercados.
   function openDetail(fixture: RawFixtureOdds) {
-    if (fixture.sport) setDetail({ fixtureId: fixture.fixtureId, sport: fixture.sport })
+    if (fixture.sport) navigate(`/partido/${encodeURIComponent(fixture.sport)}/${encodeURIComponent(fixture.fixtureId)}`)
   }
 
-  /**
-   * C15 / C12 / C13: la previa ya no muestra ningún análisis que pueda
-   * influir en el usuario (antes el modal <PreBetCheck/> aparecía aquí).
-   * En la previa el producto es un simulador de apuestas a secas: se
-   * registra la apuesta directamente y TODO el análisis ocurre DESPUÉS,
-   * en <ResultModal/>.
-   */
-  async function placeBetNow() {
-    if (!user || selections.length === 0) return
-    setError(null)
-    try {
-      const betId = await placeBet(user.uid, selections, stake)
-      setSelections([])
-      const updated = await getBetHistory(user.uid)
-      setPastBets(updated)
-      const justPlaced = updated.find((b) => b.id === betId) ?? null
-      if (justPlaced) setResultBet(justPlaced)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo registrar la apuesta')
-    }
-  }
-
-  async function demoResolve(won: boolean) {
-    if (!resultBet) return
-    await resolveBet(resultBet.id, won ? 'won' : 'lost')
-    const updated = await getBetHistory(user!.uid)
-    setPastBets(updated)
-    const resolved = updated.find((b) => b.id === resultBet.id) ?? null
-    setResultBet(resolved)
-  }
-
-  const odds = combinedOdds(selections)
   const now = Date.now()
   // El destacado es el de mayor relevancia (no el próximo) — ver utils/featured.
   const featured = pickFeatured(fixtures, now)
@@ -285,84 +200,8 @@ export default function Apuestas() {
 
       {/* Historial: la pérdida acumulada, visible apuesta por apuesta */}
       <BetHistory bets={pastBets} />
-
-      {/* Boleto flotante minimizable, pegado al margen y por encima de todo */}
-      <FloatingBetSlip
-        selections={selections}
-        stake={stake}
-        onStakeChange={setStake}
-        combinedOdds={odds}
-        error={error}
-        onRemove={toggleSelection}
-        onPlace={placeBetNow}
-      />
-
-      {/* Detalle del partido: todos los mercados disponibles */}
-      {detail && (
-        <MatchDetailModal
-          fixtureId={detail.fixtureId}
-          sport={detail.sport}
-          selections={selections}
-          onPick={toggleSelection}
-          onClose={() => setDetail(null)}
-        />
-      )}
-
-      {/* ===== Flujo POSTERIOR a la apuesta (el análisis va aquí, no antes) ===== */}
-      {resultBet && resultBet.status !== 'pending' && (
-        <PostBetAnalysis bet={resultBet} pastBets={pastBets} wallet={wallet} onClose={() => setResultBet(null)} />
-      )}
-
-      {resultBet && resultBet.status === 'pending' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-lg bg-paper p-6 text-center">
-            {isMockBet(resultBet) ? (
-              <>
-                {/* Datos de ejemplo (sin partido real): se resuelven a mano */}
-                <p className="text-sm text-ink/70">
-                  Apuesta registrada. Estos son datos de ejemplo, así que el resultado lo
-                  eliges tú. Con cuotas reales, lo decide el partido:
-                </p>
-                <div className="mt-4 flex justify-center gap-3">
-                  <button
-                    onClick={() => demoResolve(true)}
-                    className="rounded bg-sage px-3 py-1.5 text-sm text-white"
-                  >
-                    Simular que ganó
-                  </button>
-                  <button
-                    onClick={() => demoResolve(false)}
-                    className="rounded bg-burgundy px-3 py-1.5 text-sm text-white"
-                  >
-                    Simular que perdió
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Apuesta real: se resolverá sola cuando termine el partido */}
-                <p className="text-sm text-ink/70">
-                  Apuesta registrada. Se resolverá sola cuando termine el partido: la próxima
-                  vez que abras la app, el resultado real decidirá si ganaste o perdiste.
-                </p>
-                <button
-                  onClick={() => setResultBet(null)}
-                  className="mt-4 rounded bg-slate px-4 py-2 text-sm text-white hover:bg-slatedark"
-                >
-                  Entendido
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
-}
-
-/** Una apuesta es "de ejemplo" si todas sus selecciones son datos mock. */
-function isMockBet(bet: Bet): boolean {
-  return bet.selections.every((s) => s.fixtureId.startsWith('mock-'))
 }
 
 /* ----------------------------------------------------------------------- */

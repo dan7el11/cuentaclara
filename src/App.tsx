@@ -5,10 +5,12 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Apuestas from './pages/Apuestas'
+import MatchDetail from './pages/MatchDetail'
 import MisApuestas from './pages/MisApuestas'
 import Educacion from './pages/Educacion'
 import Apoyo from './pages/Apoyo'
 import Showcase from './pages/Showcase'
+import { BetSlipProvider } from './context/BetSlipContext'
 
 export default function App() {
   const { user, loading } = useAuth()
@@ -32,15 +34,18 @@ export default function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/apuestas" element={<Apuestas />} />
-        <Route path="/mis-apuestas" element={<MisApuestas />} />
-        <Route path="/educacion" element={<Educacion />} />
-        <Route path="/apoyo" element={<Apoyo />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Layout>
+    <BetSlipProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/apuestas" element={<Apuestas />} />
+          <Route path="/partido/:sport/:fixtureId" element={<MatchDetail />} />
+          <Route path="/mis-apuestas" element={<MisApuestas />} />
+          <Route path="/educacion" element={<Educacion />} />
+          <Route path="/apoyo" element={<Apoyo />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Layout>
+    </BetSlipProvider>
   )
 }
