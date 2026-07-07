@@ -1,0 +1,13 @@
+{
+  "name": "NoBetter — apuestas con dinero ficticio",
+  "short_name": "NoBetter",
+  "description": "Simulador de apuestas con dinero ficticio y consecuencias reales.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c0d17",
+  "theme_color": "#0c0d17",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

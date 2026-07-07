@@ -64,6 +64,88 @@ export function impliedProbability(decimalOdds: number): number {
 }
 
 /**
+ * Margen de la casa (overround) a partir de TODAS las cuotas del mismo mercado.
+ * Ej. 1X2 [2.45, 3.10, 2.90] → 0.076 (7.6%). Equivale a bookmakerMargin pero
+ * devuelve el overround completo sin filtrar (espejo de la fórmula del spec).
+ */
+export function houseMargin(allOdds: number[]): number {
+  return allOdds.reduce((a, o) => a + 1 / o, 0) - 1
+}
+
+/**
+ * Probabilidad real (sin margen): normaliza la probabilidad implícita de una
+ * cuota por la suma de implícitas del mercado, quitando el overround.
+ */
+export function trueProbability(decimalOdds: number, allOdds: number[]): number {
+  const raw = 1 / decimalOdds
+  const sum = allOdds.reduce((a, o) => a + 1 / o, 0)
+  return sum > 0 ? raw / sum : raw
+}
+
+/**
+ * Valor esperado por cada $1 apostado, usando la probabilidad real.
+ * Negativo cuando la cuota incorpora margen. VE por $10 = resultado * 10.
+ */
+export function expectedValuePerUnit(decimalOdds: number, trueProb: number): number {
+  const netWinPerUnit = decimalOdds - 1
+  return trueProb * netWinPerUnit - (1 - trueProb)
+}
+
+/* ── Poisson: probabilidad histórica de over/under (córners, goles, tarjetas) ── */
+
+function factorial(n: number): number {
+  let r = 1
+  for (let i = 2; i <= n; i++) r *= i
+  return r
+}
+
+export function poissonPmf(lambda: number, k: number): number {
+  return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k)
+}
+
+/** P(total > umbral). Umbral tipo 9.5 → suma k=0..9 y resta de 1. */
+export function probOver(lambda: number, threshold: number): number {
+  const floor = Math.floor(threshold)
+  let cum = 0
+  for (let k = 0; k <= floor; k++) cum += poissonPmf(lambda, k)
+  return 1 - cum
+}
+
+export function probUnder(lambda: number, threshold: number): number {
+  return 1 - probOver(lambda, threshold)
+}
+
+/* ── Ritmo y proyección ── */
+
+/** "1 cada N minutos" (o aviso si no hubo ninguno). */
+export function ritmoTexto(total: number, minutos = 90): string {
+  if (total === 0) return 'no hubo ninguno en todo el partido'
+  return `1 cada ${Math.round(minutos / total)} minutos`
+}
+
+/** Minutos que harían falta para alcanzar un umbral al ritmo observado. */
+export function minutosParaUmbral(total: number, umbral: number, minutos = 90): number {
+  if (total === 0) return Infinity
+  return Math.round(umbral / (total / minutos))
+}
+
+/**
+ * xG proxy: estimación de goles esperados cuando el plan no entrega xG real.
+ * Coeficientes simplificados estándar de la industria.
+ */
+export function xgProxy(shotsOnGoal: number, shotsInsideBox: number, shotsTotal: number): number {
+  const onGoal = shotsOnGoal * 0.3
+  const insideExtra = (shotsInsideBox - shotsOnGoal) * 0.08
+  const outsideExtra = (shotsTotal - shotsInsideBox) * 0.03
+  return Math.max(0, onGoal + insideExtra + outsideExtra)
+}
+
+/** Tasa de conversión de un jugador: goles / disparos. */
+export function conversionRate(goals: number, shots: number): number {
+  return shots === 0 ? 0 : goals / shots
+}
+
+/**
  * Valor esperado (promedio) de una apuesta dado el margen de la casa.
  * Es negativo: por cada vez que hacés esta apuesta, en promedio perdés
  * `stake * margin`. No depende de si esta vez ganaste o perdiste.

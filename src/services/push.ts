@@ -1,6 +1,7 @@
 import { getToken, onMessage } from 'firebase/messaging'
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db, firebaseConfigForSW, getMessagingIfSupported } from '../firebase'
+import { isNativePlatform, enableNativePush } from './nativePush'
 
 // Clave VAPID del par de claves Web Push de Firebase
 // (Project settings > Cloud Messaging > Web configuration > Generate key pair).
@@ -27,6 +28,9 @@ function swUrl(): string {
  * el backend pueda enviarle push al resolver una apuesta.
  */
 export async function enablePush(uid: string): Promise<PushStatus> {
+  // En la app nativa (Android/iOS) usamos el push de Capacitor, no el web.
+  if (isNativePlatform()) return enableNativePush(uid)
+
   const messaging = await getMessagingIfSupported()
   if (!messaging || !VAPID_KEY || !('serviceWorker' in navigator)) return 'unsupported'
 
