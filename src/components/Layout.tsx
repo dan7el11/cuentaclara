@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <header className="border-b border-paperline bg-paper/95 backdrop-blur">
           <nav className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-3 lg:px-6">
             <Logo variant="full" size={22} ink="var(--color-text)" />
-            <div className="flex gap-6 text-sm">
+            <div className="flex min-w-0 gap-4 overflow-x-auto whitespace-nowrap text-sm sm:gap-6 [scrollbar-width:none]">
               <Tab to="/">Cuenta</Tab>
               <Tab to="/apuestas">Apuestas</Tab>
               <Tab to="/mis-apuestas">Mis apuestas</Tab>

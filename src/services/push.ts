@@ -62,7 +62,8 @@ export async function listenForegroundPush(): Promise<() => void> {
   if (!messaging) return () => {}
   return onMessage(messaging, (payload) => {
     const n = payload.notification
-    if (n && Notification.permission === 'granted') {
+    // Guarda: en algunos WebViews la API Notification no existe.
+    if (n && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification(n.title ?? 'NoBetter', { body: n.body })
     }
   })

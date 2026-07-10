@@ -6,6 +6,9 @@ import {
   historicalHitRateInBucket,
   summarizeUserBets,
   estimateOpportunityCost,
+  breakEvenHitRate,
+  probNetPositiveAfterN,
+  expectedValuePerUnit,
 } from '../utils/financialMath'
 import { intensityFor, cierreP2, cierreP3, cierreP4, cierreP5, cierreP6 } from '../utils/postBetText'
 import { localize } from '../utils/flag'
@@ -39,7 +42,7 @@ export default function PostBetAnalysis({ bet, pastBets, wallet, marketStats, on
 
   const steps: { title: string; render: () => ReactNode }[] = [
     { title: 'Datos del partido', render: () => <P1 bet={bet} ctx={ctx} /> },
-    { title: 'Margen del resultado', render: () => <P2 ctx={ctx} /> },
+    { title: 'Por qué (no) acertaste', render: () => <P2 ctx={ctx} /> },
     { title: 'Lo que decían los datos', render: () => <P3 ctx={ctx} /> },
     { title: 'Lo que te vendió la cuota', render: () => <P4 ctx={ctx} /> },
     { title: 'Cómo te fue vs. todos', render: () => <P5 ctx={ctx} market={marketStats} /> },
@@ -101,6 +104,23 @@ function useAnalysis(bet: Bet, pastBets: Bet[], wallet?: Wallet | null) {
   const evPer10 = data.evPer10 ?? -Math.round(10 * houseMargin * 100) / 100
   const marginIsTypical = data.houseMargin == null
 
+  // Piedra angular: por qué (no) acertaste y por qué la repetición pierde.
+  // Probabilidad real estimada = implícita sin el margen (el backend la afina).
+  const trueProbEst = data.trueProb ?? impliedProb / (1 + houseMargin)
+  const perLeg = bet.selections.map((s) => ({
+    label: s.selectionLabel,
+    fixture: s.fixtureLabel,
+    odds: s.decimalOdds,
+    implied: impliedProbability(s.decimalOdds),
+  }))
+  const breakEven = breakEvenHitRate(combined)
+  const evPerBet = expectedValuePerUnit(combined, trueProbEst) * bet.stake
+  const projections = [10, 50, 100].map((n) => ({
+    n,
+    expectedNet: Math.round(evPerBet * n * 100) / 100, // negativo
+    probProfit: probNetPositiveAfterN(combined, trueProbEst, n),
+  }))
+
   // P6
   const repeat = data.repeatProbability ?? probabilityOfRepeatingStreak(bet.selections.map((s) => s.decimalOdds))
   const oppBase = wallet && wallet.totalStaked > 0 ? wallet.totalStaked : bet.stake
@@ -131,6 +151,10 @@ function useAnalysis(bet: Bet, pastBets: Bet[], wallet?: Wallet | null) {
     houseMargin,
     evPer10,
     marginIsTypical,
+    trueProbEst,
+    perLeg,
+    breakEven,
+    projections,
     repeat,
     opp,
     stats,
@@ -219,8 +243,49 @@ function P1({ bet, ctx }: { bet: Bet; ctx: Ctx }) {
 function P2({ ctx }: { ctx: Ctx }) {
   const d = ctx.data
   const hasMatchData = d.unitsShort != null || d.crossedAtMinute != null || d.paceText || (d.criticalMoments?.length ?? 0) > 0
+  const combo = ctx.perLeg.length > 1
+  const failProb = 1 - ctx.impliedProb
   return (
     <div className="space-y-4">
+      {/* ── Piedra angular: por qué (no) acertaste ── */}
+      <div className="rounded-lg border border-paperline bg-surface p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink/45">
+          {ctx.won ? 'Por qué esto era lo raro' : 'Por qué fallaste'}
+        </p>
+        <LedgerRule margin="8px 0" />
+        <ul className="space-y-2">
+          {ctx.perLeg.map((leg, i) => (
+            <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate text-ink/75">{localize(leg.label)}</span>
+              <span className="figure flex-none text-ink">
+                {leg.odds.toFixed(2)} → <span className="font-semibold">{pct(leg.implied)}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {combo && (
+          <p className="figure mt-3 border-t border-paperline pt-2 text-sm text-ink">
+            {ctx.perLeg.map((l) => pct(l.implied)).join(' × ')} ={' '}
+            <span className="font-semibold text-burgundy">{pct(ctx.impliedProb)}</span>
+          </p>
+        )}
+        <p className="mt-3 text-sm leading-relaxed text-ink/75">
+          {ctx.won ? (
+            <>
+              El propio mercado le daba <span className="figure font-semibold">{pct(ctx.impliedProb)}</span> a tu
+              apuesta: acertaste la cara menos probable de la moneda. Eso no se predijo — salió.
+            </>
+          ) : (
+            <>
+              El propio mercado decía que esto fallaba con un{' '}
+              <span className="figure font-semibold text-burgundy">{pct(failProb)}</span> de probabilidad
+              {combo && ' — cada selección extra multiplicó la chance de perder'}. No perdiste por mala suerte ni
+              por elegir mal el partido: perdiste porque el resultado más probable era exactamente este.
+            </>
+          )}
+        </p>
+      </div>
+
       {hasMatchData ? (
         <>
           <div className="grid grid-cols-2 gap-2">
@@ -332,6 +397,52 @@ function P4({ ctx }: { ctx: Ctx }) {
         hint={ctx.marginIsTypical ? 'Estimación con un margen típico de mercado; el exacto se calcula con todas las cuotas del mercado.' : undefined}
       />
       <Stat label="Valor esperado por cada $10" value={`−${money(Math.abs(ctx.evPer10))}`} tone="bad" />
+
+      {/* ── Piedra angular: por qué vas a seguir perdiendo ── */}
+      <div className="rounded-lg border border-burgundy/30 bg-burgundy/5 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-burgundy/80">
+          {ctx.won ? 'Por qué ganar hoy no te salva' : 'Por qué vas a seguir perdiendo'}
+        </p>
+        <LedgerRule margin="8px 0" />
+
+        <p className="text-sm leading-relaxed text-ink/75">
+          Para ganarle a la cuota {ctx.combined.toFixed(2)} necesitás acertar más del{' '}
+          <span className="figure font-semibold">{pct(ctx.breakEven)}</span> de las veces. La probabilidad real de
+          esta apuesta es <span className="figure font-semibold">{pct(ctx.trueProbEst)}</span>
+          {ctx.stats.hitRate != null && (
+            <>
+              {' '}— y tu acierto real hasta ahora es{' '}
+              <span
+                className={`figure font-semibold ${ctx.stats.hitRate < ctx.breakEven ? 'text-burgundy' : 'text-sage'}`}
+              >
+                {pct(ctx.stats.hitRate)}
+              </span>
+            </>
+          )}
+          . Esa brecha no se cierra con experiencia ni con intuición: es el margen de la casa.
+        </p>
+
+        <p className="mt-3 text-[11px] uppercase tracking-wide text-ink/50">Si repetís esta misma apuesta…</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {ctx.projections.map((p) => (
+            <div key={p.n} className="rounded-lg border border-paperline bg-surface p-2.5 text-center">
+              <p className="figure text-[11px] text-ink/50">{p.n} veces</p>
+              <p className="figure mt-0.5 text-sm font-semibold text-burgundy">
+                −{money(Math.abs(p.expectedNet))}
+              </p>
+              <p className="figure mt-0.5 text-[10px] text-ink/55">
+                {pct(p.probProfit)} de ir ganando
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-ink/55">
+          Pérdida esperada acumulada y probabilidad de estar en ganancia neta. La pérdida esperada{' '}
+          <strong>crece con cada repetición</strong> y, a la larga, la chance de ir ganando cae hacia cero: la
+          repetición trabaja para la casa, no para vos.
+        </p>
+      </div>
+
       <Closing text={cierreP4(ctx.result, ctx.intensity, { houseMargin: ctx.houseMargin, evPer10: ctx.evPer10 })} />
     </div>
   )
@@ -449,7 +560,7 @@ function Closing({ text, strong = false }: { text: string; strong?: boolean }) {
 
 function PendingNote({ text }: { text: string }) {
   return (
-    <p className="rounded-lg border border-dashed border-paperline bg-surface-tinted p-3 text-xs leading-relaxed text-ink/55">
+    <p className="rounded-lg border border-dashed border-paperline bg-paper/40 p-3 text-xs leading-relaxed text-ink/55">
       {text}
     </p>
   )

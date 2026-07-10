@@ -522,7 +522,7 @@ function FixtureRow({
   const margin = bookmakerMargin(fixture.options.map((o) => o.decimalOdds))
   const kickoff = formatKickoff(fixture.kickoff)
   return (
-    <div className="grid grid-cols-[minmax(150px,1fr)_repeat(3,64px)] items-center gap-2 px-2 py-3 transition-colors hover:bg-paper/50">
+    <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,50px)] items-center gap-1.5 px-2 py-3 transition-colors hover:bg-paper/50 sm:grid-cols-[minmax(150px,1fr)_repeat(3,64px)] sm:gap-2">
       <button
         type="button"
         onClick={() => onOpenDetail(fixture)}
