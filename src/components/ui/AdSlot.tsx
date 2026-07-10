@@ -50,7 +50,7 @@ export function AdSlot({ format = 'rectangle', slotId, children, className, styl
 
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-paperline bg-surface-tinted text-center ${className ?? ''}`}
+      className={`flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-paperline bg-paper/40 text-center ${className ?? ''}`}
       style={frame}
       data-ad-slot={slotId}
       aria-hidden="true"

@@ -146,6 +146,39 @@ export function conversionRate(goals: number, shots: number): number {
 }
 
 /**
+ * Tasa de acierto de equilibrio: el % de aciertos que necesitás para NO
+ * perder dinero apostando siempre a esta cuota. Con margen de la casa, la
+ * probabilidad real de acertar queda por debajo de este número — por diseño.
+ */
+export function breakEvenHitRate(decimalOdds: number): number {
+  if (decimalOdds <= 1) return 1
+  return 1 / decimalOdds
+}
+
+/**
+ * Probabilidad de estar en GANANCIA neta después de repetir n veces la misma
+ * apuesta (misma cuota, mismo monto), con probabilidad real de acierto p.
+ * Binomial exacta con recurrencia numéricamente estable: hacen falta más de
+ * n/cuota aciertos para que lo cobrado supere lo apostado.
+ * Este es el número que explica por qué "recuperarse apostando" falla.
+ */
+export function probNetPositiveAfterN(decimalOdds: number, p: number, n: number): number {
+  if (decimalOdds <= 1 || p <= 0) return 0
+  if (p >= 1) return 1
+  const kMin = Math.floor(n / decimalOdds) + 1 // aciertos mínimos para ganancia neta
+  if (kMin > n) return 0
+  // pmf(0) = (1-p)^n; pmf(k+1) = pmf(k) * (n-k)/(k+1) * p/(1-p)
+  let pmf = Math.pow(1 - p, n)
+  let tail = kMin === 0 ? pmf : 0
+  const ratio = p / (1 - p)
+  for (let k = 0; k < n; k++) {
+    pmf = pmf * ((n - k) / (k + 1)) * ratio
+    if (k + 1 >= kMin) tail += pmf
+  }
+  return Math.min(1, Math.max(0, tail))
+}
+
+/**
  * Valor esperado (promedio) de una apuesta dado el margen de la casa.
  * Es negativo: por cada vez que hacés esta apuesta, en promedio perdés
  * `stake * margin`. No depende de si esta vez ganaste o perdiste.
